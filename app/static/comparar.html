@@ -219,12 +219,21 @@ async function comparar() {
           <div class="chg ${qB.change_percent >= 0 ? 'up' : 'down'}">${qB.change_percent >= 0 ? '▲' : '▼'} ${Math.abs(qB.change_percent || 0).toFixed(2)}%</div>
         </div>
       </div>
+      ${helpLegend('legend-compare', {
+        'P/L': 'Preço dividido pelo Lucro por Ação. Indica quantos anos para recuperar o investimento.',
+        'P/VP': 'Preço sobre Valor Patrimonial. Abaixo de 1 = subvalorizado.',
+        'EV/EBITDA': 'Valor da empresa dividido pelo lucro antes de juros, impostos, depreciação.',
+        'ROE': 'Retorno sobre Patrimônio Líquido. Mede a eficiência da empresa.',
+        'Beta': 'Risco do ativo vs. mercado. Acima de 1 = mais volátil que o mercado.',
+        'VPA': 'Valor Patrimonial por Ação. Patrimônio líquido dividido pelo total de ações.',
+        'LPA': 'Lucro por Ação. Lucro líquido dividido pelo total de ações.',
+      }, 'O que significam as siglas?')}
       <div class="metrics">
         ${row('P/L (Preço/Lucro)', n(sA.trailing_pe), n(sB.trailing_pe), cmp(sA.trailing_pe, sB.trailing_pe, false))}
         ${row('P/VP', n(sA.price_to_book), n(sB.price_to_book), cmp(sA.price_to_book, sB.price_to_book, false))}
         ${row('EV/EBITDA', n(sA.ev_to_ebitda), n(sB.ev_to_ebitda), cmp(sA.ev_to_ebitda, sB.ev_to_ebitda, false))}
-        ${row('Dividend Yield', pct(sA.dividend_yield), pct(sB.dividend_yield), cmp(sA.dividend_yield, sB.dividend_yield, true))}
-        ${row('ROE', pct(fA.roe), pct(fB.roe), cmp(fA.roe, fB.roe, true))}
+        ${row('Rendimento de Dividendos', pct(sA.dividend_yield), pct(sB.dividend_yield), cmp(sA.dividend_yield, sB.dividend_yield, true))}
+        ${row('ROE (Retorno s/ PL)', pct(fA.roe), pct(fB.roe), cmp(fA.roe, fB.roe, true))}
         ${row('Beta (risco)', n(sA.beta), n(sB.beta), cmp(sA.beta, sB.beta, false))}
         ${row('VPA', money(sA.book_value), money(sB.book_value), cmp(sA.book_value, sB.book_value, true))}
         ${row('LPA', money(sA.earnings_per_share), money(sB.earnings_per_share), cmp(sA.earnings_per_share, sB.earnings_per_share, true))}

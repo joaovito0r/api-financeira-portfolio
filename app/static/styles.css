@@ -195,6 +195,25 @@ img, svg { display: block; max-width: 100%; }
 }
 .menu-toggle svg { width: 20px; height: 20px; }
 
+/* Theme toggle (na sidebar) */
+.theme-toggle {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-sec);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+}
+.theme-toggle:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+  transform: rotate(15deg);
+}
+
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -745,6 +764,7 @@ tbody tr.active { background: var(--brand-soft); }
 .skeleton-line:last-child { width: 60%; }
 .skeleton-bar { width: 100%; height: 6px; }
 .skeleton-block { width: 100%; height: 170px; }
+.skeleton-row { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
 
 @keyframes shimmer {
   0%   { background-position: 200% 0; }

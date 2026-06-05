@@ -189,31 +189,56 @@ async function carregar() {
       </div>
 
       <div class="sec">
-        <h2>${icon('trendingUp', { size: 16 })} Valuation</h2>
+        <h2>${icon('trendingUp', { size: 16 })} Avaliação
+          ${helpLegend('leg-avaliacao', {
+            'P/L': 'Preço dividido pelo Lucro por Ação. Indica quantos anos para recuperar o investimento.',
+            'P/VP': 'Preço sobre Valor Patrimonial. Abaixo de 1 = subvalorizado.',
+            'EV/EBITDA': 'Valor da empresa dividido pelo lucro antes de juros, impostos, depreciação e amortização.',
+            'Rendimento de Dividendos': 'Percentual do preço pago em dividendos no último ano.',
+            'VPA': 'Valor Patrimonial por Ação. Patrimônio líquido dividido pelo total de ações.',
+            'LPA': 'Lucro por Ação. Lucro líquido dividido pelo total de ações.',
+          })}
+        </h2>
         <div class="grid2">
           <div class="item"><div class="l">P/L Corrente</div><div class="v">${n(stats.trailing_pe)}x</div></div>
           <div class="item"><div class="l">P/VP</div><div class="v">${n(stats.price_to_book)}x</div></div>
           <div class="item"><div class="l">EV/EBITDA</div><div class="v">${n(stats.ev_to_ebitda)}x</div></div>
-          <div class="item"><div class="l">Dividend Yield</div><div class="v green">${pct(stats.dividend_yield)}</div></div>
+          <div class="item"><div class="l">Rendimento de Dividendos</div><div class="v green">${pct(stats.dividend_yield)}</div></div>
           <div class="item"><div class="l">VPA</div><div class="v">${money(stats.book_value)}</div></div>
           <div class="item"><div class="l">LPA</div><div class="v gold">${money(stats.earnings_per_share)}</div></div>
         </div>
       </div>
 
       <div class="sec">
-        <h2>${icon('bar', { size: 16 })} Indicadores Financeiros</h2>
+        <h2>${icon('bar', { size: 16 })} Indicadores Financeiros
+          ${helpLegend('leg-indicadores', {
+            'Margem Líquida': 'Lucro líquido dividido pela receita total. Quanto sobra após todas as despesas.',
+            'Margem Operacional': 'Lucro operacional dividido pela receita. Exclui resultados financeiros.',
+            'ROE': 'Retorno sobre Patrimônio Líquido. Mede a eficiência em gerar lucro com o capital próprio.',
+            'ROA': 'Retorno sobre Ativos. Eficiência em usar os ativos para gerar lucro.',
+            'Dívida/PL': 'Dívida total dividida pelo Patrimônio Líquido. Acima de 1 = mais dívida que capital próprio.',
+            'Crescimento Receita': 'Variação percentual da receita em relação ao ano anterior.',
+          })}
+        </h2>
         <div class="grid2">
           <div class="item"><div class="l">Margem Líquida</div><div class="v green">${pct(fin.profit_margin)}</div></div>
           <div class="item"><div class="l">Margem Operacional</div><div class="v green">${pct(fin.operating_margin)}</div></div>
-          <div class="item"><div class="l">ROE</div><div class="v gold">${pct(fin.roe)}</div></div>
-          <div class="item"><div class="l">ROA</div><div class="v">${pct(fin.roa)}</div></div>
+          <div class="item"><div class="l">ROE (Retorno s/ PL)</div><div class="v gold">${pct(fin.roe)}</div></div>
+          <div class="item"><div class="l">ROA (Retorno s/ Ativos)</div><div class="v">${pct(fin.roa)}</div></div>
           <div class="item"><div class="l">Dívida / PL</div><div class="v ${(fin.debt_to_equity||0) > 1 ? 'red' : 'green'}">${n(fin.debt_to_equity)}</div></div>
           <div class="item"><div class="l">Crescimento Receita</div><div class="v">${pct(fin.revenue_growth)}</div></div>
         </div>
       </div>
 
       <div class="sec">
-        <h2>${icon('spark', { size: 16 })} Performance Recente</h2>
+        <h2>${icon('spark', { size: 16 })} Performance Recente
+          ${helpLegend('leg-performance', {
+            'Beta': 'Risco do ativo vs. mercado. Beta = 1: mesma volatilidade. &gt;1: mais volátil. &lt;1: menos volátil.',
+            'Máxima 52 sem': 'Maior preço do ativo nos últimos 52 semanas (1 ano).',
+            'Mínima 52 sem': 'Menor preço do ativo nos últimos 52 semanas (1 ano).',
+            'Valor de Mercado': 'Valor total da empresa na bolsa (preço da ação × total de ações).',
+          })}
+        </h2>
         <div class="grid2">
           <div class="item"><div class="l">Beta</div><div class="v">${n(stats.beta)}</div></div>
           <div class="item"><div class="l">Máxima 52 sem</div><div class="v">${money(stats.week_high_52)}</div></div>

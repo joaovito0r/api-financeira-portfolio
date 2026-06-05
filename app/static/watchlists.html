@@ -168,9 +168,15 @@
 <main class="main">
   <div class="header">
     <h1>Watchlists</h1>
-    <button class="btn btn-primary" onclick="criarWatchlist()">
-      <span data-icon="plus" data-icon-size="14"></span> Nova Lista
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      ${helpLegend('leg-wl', {
+        'P/L': 'Preço dividido pelo Lucro por Ação. Indica quantos anos para recuperar.',
+        'DY': 'Dividend Yield. Retorno anual em dividendos sobre o preço atual.',
+      })}
+      <button class="btn btn-primary" onclick="criarWatchlist()">
+        <span data-icon="plus" data-icon-size="14"></span> Nova Lista
+      </button>
+    </div>
   </div>
 
   <div class="tabs" id="tabs-container"></div>

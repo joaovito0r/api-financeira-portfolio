@@ -127,21 +127,54 @@ function showToast(message, type = 'info', duration = 3500) {
 
 /**
  * Skeleton genérico.
- * @param {string} type - 'line' | 'block' | 'bar'
- * @param {object} opts - { count, width, height }
+ * @param {string} type - 'line' | 'lines' | 'block' | 'bar' | 'row' | 'table-row' | 'card-row' | 'value'
+ * @param {object} opts - { count, width }
  */
 function skeleton(type = 'line', opts = {}) {
   if (type === 'lines') {
     const count = opts.count || 3;
     return `<div>${'<div class="skeleton skeleton-line"></div>'.repeat(count)}</div>`;
   }
-  if (type === 'block') {
-    return `<div class="skeleton skeleton-block"></div>`;
+  if (type === 'block') return `<div class="skeleton skeleton-block"></div>`;
+  if (type === 'bar')    return `<div class="skeleton skeleton-bar"></div>`;
+
+  if (type === 'row') {
+    return `<div class="skeleton-row" style="${opts.width ? `width:${opts.width};` : ''}">
+      <div class="skeleton" style="width:${opts.iconSize || '40%'};height:12px;"></div>
+      <div class="skeleton skeleton-line" style="width:60%;"></div>
+    </div>`;
   }
-  if (type === 'bar') {
-    return `<div class="skeleton skeleton-bar"></div>`;
+
+  if (type === 'value') {
+    return `<div class="skeleton" style="height:22px;width:${opts.width || '60%'};"></div>`;
   }
+
+  // 'line' default
   return `<div class="skeleton skeleton-line" style="${opts.width ? `width:${opts.width};` : ''}"></div>`;
+}
+
+/**
+ * Skeleton de linha de tabela (com 6 colunas por padrão).
+ */
+function skeletonTableRow(cols = 6) {
+  const cells = Array.from({ length: cols }, (_, i) => {
+    const w = i === 0 ? '70%' : i === 1 ? '50%' : '60%';
+    return `<td><div class="skeleton skeleton-line" style="width:${w};height:11px;"></div></td>`;
+  }).join('');
+  return `<tr>${cells}</tr>`;
+}
+
+/**
+ * Skeleton de card de indicador (Dashboard).
+ */
+function skeletonCard() {
+  return `<div class="card">
+    <div class="skeleton" style="width:32px;height:32px;border-radius:8px;margin-bottom:8px;"></div>
+    <div class="skeleton skeleton-line" style="width:60%;height:10px;"></div>
+    <div class="skeleton" style="height:22px;width:70%;margin:6px 0 4px;"></div>
+    <div class="skeleton skeleton-line" style="width:90%;height:9px;"></div>
+    <div class="skeleton skeleton-line" style="width:40%;height:11px;margin-top:4px;"></div>
+  </div>`;
 }
 
 function escapeHtml(s) {

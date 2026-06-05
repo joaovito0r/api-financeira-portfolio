@@ -61,7 +61,7 @@ function formatMoney(value) {
 function formatPercent(value) {
   if (value == null) return '-';
   const signal = value >= 0 ? '+' : '';
-  return `${signal}${(value * 100).toFixed(2)}%`;
+  return `${signal}${value.toFixed(2)}%`;
 }
 
 function formatChange(value) {
@@ -303,4 +303,56 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSidebar);
 } else {
   initSidebar();
+}
+
+// ── Theme toggle (light/dark) ──────────────────────────────────────────────
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  try { localStorage.setItem('financeiro_theme', theme); } catch(e) {}
+  // Atualiza o ícone do botão (se existir)
+  const btn = document.getElementById('theme-toggle');
+  if (btn) {
+    btn.innerHTML = theme === 'light'
+      ? icon('refresh', { size: 14 }) // placeholder, vai ser re-hidratado
+      : icon('refresh', { size: 14 });
+    hydrateIcons(btn);
+  }
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+}
+
+// ── Help Legend (legenda de abreviações) ────────────────────────────────────
+
+/**
+ * Gera um botão "?" com legenda explicativa para abreviações financeiras.
+ * Uso: helpLegend('id-unico', { 'P/L': 'Preço dividido pelo Lucro por Ação', 'DY': 'Retorno em dividendos' })
+ * @param {string} id - ID único para o elemento (ex: 'legend-pl')
+ * @param {object} defs - Dicionário { sigla: 'explicação', ... }
+ * @param {string} title - Título opcional da legenda
+ * @returns {string} HTML do botão + legenda
+ */
+function helpLegend(id, defs, title) {
+  const entries = Object.entries(defs)
+    .map(([k, v]) => `<span><strong style="color:var(--text);">${escapeHtml(k)}:</strong> ${escapeHtml(v)}</span>`)
+    .join('<br>\n');
+  return `<div style="position:relative;display:inline-flex;">
+    <button class="btn btn-icon btn-ghost btn-sm" onclick="var e=document.getElementById('${id}');e.style.display=e.style.display==='block'?'none':'block'" aria-label="Ajuda" style="width:18px;height:18px;border-radius:50%;border:1px solid var(--border);padding:0;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+    </button>
+    <div class="legend" id="${id}" style="display:none;position:absolute;top:26px;left:0;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text-sec);width:280px;z-index:10;line-height:1.6;box-shadow:var(--elev-2);">
+      <strong style="color:var(--text);display:block;margin-bottom:6px;">${escapeHtml(title || 'O que significam as siglas?')}</strong>
+      ${entries}
+    </div>
+  </div>`;
 }

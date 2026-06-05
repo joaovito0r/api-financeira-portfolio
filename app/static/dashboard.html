@@ -3,12 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>API Financeira — Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=3">
+  <script>
+    // Aplica tema persistido antes da renderização (evita flash)
+    (function() {
+      try {
+        const t = localStorage.getItem('financeiro_theme');
+        if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -41,6 +53,11 @@
     <span data-icon="user"></span> Perfil
   </a>
   <div class="spacer"></div>
+  <div style="display:flex;gap:4px;padding:0 10px;margin-bottom:8px;">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema" title="Alternar tema">
+      <span data-icon="refresh" data-icon-size="14"></span>
+    </button>
+  </div>
   <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
 </nav>
 
@@ -53,43 +70,17 @@
     </div>
   </div>
 
-  <div class="alert-bar" onclick="window.location='/static/alertas.html'" role="button" tabindex="0">
+  <!-- Alerta -->
+  <div class="alert-bar" id="alert-bar" onclick="window.location='/static/alertas.html'" role="button" tabindex="0" style="display:none;">
     <span class="alert-icon" data-icon="bell"></span>
-    <span><strong>PETR4</strong> — Seu alerta de <strong>R$ 45,00 (above)</strong> está a <strong>7%</strong> de ser atingido! Preço atual: R$ 42,00</span>
+    <span id="alert-bar-text"></span>
     <span class="alert-arrow">Ver alertas <span data-icon="arrowRight" data-icon-size="12"></span></span>
   </div>
 
-  <div class="cards">
-    <div class="card">
-      <div class="card-icon" data-icon="trendingUp"></div>
-      <div class="card-label">IBOVESPA</div>
-      <div class="card-value" id="card-ibov-value">132.584</div>
-      <div class="card-sub">Principal índice da B3 (bolsa brasileira)</div>
-      <div class="card-change up" id="card-ibov-change"><span data-icon="trendingUp" data-icon-size="12"></span> ▲ +1,24% hoje</div>
-    </div>
-    <div class="card">
-      <div class="card-icon" data-icon="coins"></div>
-      <div class="card-label">Valor da Carteira</div>
-      <div class="card-value" id="card-wallet-value">R$ 47.320</div>
-      <div class="card-sub" id="card-wallet-sub">4 ativos · 550 ações no total</div>
-      <div class="card-change up" id="card-wallet-change">▲ +3,82% hoje</div>
-    </div>
-    <div class="card" id="card-destaque">
-      <div class="card-icon" data-icon="factory"></div>
-      <div class="card-label" id="card-destaque-ticker">PETR4 · PETROBRAS</div>
-      <div class="card-value" id="card-destaque-price">R$ 42,00</div>
-      <div class="card-sub" id="card-destaque-sub">Preço de fechamento mais recente</div>
-      <div class="card-change down" id="card-destaque-change">▼ -1,20% hoje</div>
-    </div>
-    <div class="card">
-      <div class="card-icon" data-icon="droplets"></div>
-      <div class="card-label">Dividend Yield Médio</div>
-      <div class="card-value">7,0%</div>
-      <div class="card-sub">Média dos proventos da sua carteira</div>
-      <div class="card-change up">▲ +0,3% no mês</div>
-    </div>
-  </div>
+  <!-- Cards indicadores (com skeleton) -->
+  <div class="cards" id="cards-container"></div>
 
+  <!-- Charts -->
   <div class="charts">
     <div class="chart-box">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;flex-wrap:wrap;gap:8px;">
@@ -100,128 +91,444 @@
       </div>
       <div class="chart-sub" id="chart-sub">Cada barra representa o fechamento do mês · Valores em R$</div>
       <div class="chart-wrap" id="chart-container">
-        <div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando…</span></div>
+        <div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando histórico…</span></div>
       </div>
     </div>
     <div class="chart-box">
       <h3><span data-icon="pie"></span> Distribuição da Carteira</h3>
-      <div class="chart-sub">Porcentagem investida em cada setor</div>
-      <div style="margin-top:4px;">
-        <div class="bar-section">
-          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-gold);"></span>Petróleo &amp; Gás</span><span class="bar-pct">35%</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:35%;background:linear-gradient(90deg,#d4a017,#e8b830);"></div></div>
-        </div>
-        <div class="bar-section">
-          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-blue);"></span>Mineração</span><span class="bar-pct">25%</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:25%;background:linear-gradient(90deg,#2563eb,#3b82f6);"></div></div>
-        </div>
-        <div class="bar-section">
-          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-green);"></span>Bancos</span><span class="bar-pct">20%</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:20%;background:linear-gradient(90deg,#059669,#10b981);"></div></div>
-        </div>
-        <div class="bar-section">
-          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-orange);"></span>Energia</span><span class="bar-pct">12%</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:12%;background:linear-gradient(90deg,#ea580c,#f97316);"></div></div>
-        </div>
-        <div class="bar-section">
-          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-violet);"></span>Outros</span><span class="bar-pct">8%</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:8%;background:linear-gradient(90deg,#7c3aed,#8b5cf6);"></div></div>
-        </div>
+      <div class="chart-sub" id="alloc-sub">Porcentagem investida em cada ativo</div>
+      <div style="margin-top:4px;" id="alloc-body">
+        <div class="loading-state"><span class="spinner"></span><span>Calculando…</span></div>
       </div>
     </div>
   </div>
 
+  <!-- Tabela com skeleton -->
   <div class="table-wrap">
     <div class="table-header">
       <div style="display:flex;align-items:center;gap:10px;">
         <h3><span data-icon="factory"></span> Principais Ativos</h3>
-        <div style="position:relative;">
-          <button class="btn btn-icon btn-ghost btn-sm" onclick="document.getElementById('legend-box').classList.toggle('legend')" aria-label="Ajuda sobre as colunas" style="width:18px;height:18px;border-radius:50%;border:1px solid var(--border);">
-            <span data-icon="help" data-icon-size="12"></span>
-          </button>
-          <div class="legend" id="legend-box" style="display:none;position:absolute;top:28px;left:0;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text-sec);width:280px;z-index:10;line-height:1.6;box-shadow:var(--elev-2);">
-            <strong style="color:var(--text);display:block;margin-bottom:6px;">O que significam as colunas?</strong>
-            <span><strong style="color:var(--text);">Preço/Lucro:</strong> anos para recuperar o investimento</span><br>
-            <span><strong style="color:var(--text);">Preço/VP:</strong> &lt;1 = subvalorizado, &gt;1 = valorizado</span><br>
-            <span><strong style="color:var(--text);">DY:</strong> retorno anual em dividendos</span><br>
-            <span><strong style="color:var(--text);">Variação:</strong> ▲ subiu / ▼ caiu hoje</span><br>
-            <span><strong style="color:var(--text);">Tendência:</strong> mini gráfico dos últimos 30 dias</span>
-          </div>
-        </div>
+        <div id="table-help-legend"></div>
       </div>
-      <span class="badge">Watchlist Principal · 4 ativos</span>
+      <span class="badge" id="table-badge">Watchlist Principal · 4 ativos</span>
     </div>
     <table id="assets-table">
       <thead><tr>
-        <th scope="col">Ativo</th><th scope="col">Preço</th><th scope="col">Variação</th><th scope="col">Preço/Lucro</th><th scope="col">Preço/VP</th><th scope="col">Dividend Yield</th><th scope="col">Tendência (30d)</th>
+        <th scope="col">Ativo</th><th scope="col">Preço</th><th scope="col">Variação</th><th scope="col">Preço/Lucro</th><th scope="col">Preço/VP</th><th scope="col">Rendimento de Dividendos</th><th scope="col">Tendência (30d)</th>
       </tr></thead>
-      <tbody>
-        <tr id="row-PETR4" onclick="selectAsset('PETR4')" tabindex="0">
-          <td><div class="ticker">PETR4</div><div class="ticker-sub">Petrobras · Petróleo</div></td>
-          <td class="price td-price">R$ 42,00</td>
-          <td class="td-change down">▼ -1,20%</td>
-          <td>5,57</td><td>1,21</td>
-          <td style="color:var(--success);font-weight:600;">7,0%</td>
-          <td><div class="mini-chart"><span style="height:60%;background:var(--text-sec)"></span><span style="height:45%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span></div></td>
-        </tr>
-        <tr id="row-VALE3" onclick="selectAsset('VALE3')" tabindex="0">
-          <td><div class="ticker">VALE3</div><div class="ticker-sub">Vale · Mineração</div></td>
-          <td class="price td-price">R$ 58,30</td>
-          <td class="td-change up">▲ +0,80%</td>
-          <td>4,20</td><td>1,05</td>
-          <td style="color:var(--success);font-weight:600;">9,2%</td>
-          <td><div class="mini-chart"><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:85%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span></div></td>
-        </tr>
-        <tr id="row-ITUB4" onclick="selectAsset('ITUB4')" tabindex="0">
-          <td><div class="ticker">ITUB4</div><div class="ticker-sub">Itaú Unibanco · Bancos</div></td>
-          <td class="price td-price">R$ 35,20</td>
-          <td class="td-change up">▲ +0,35%</td>
-          <td>8,10</td><td>1,45</td>
-          <td style="color:var(--success);font-weight:600;">5,4%</td>
-          <td><div class="mini-chart"><span style="height:50%;background:var(--text-sec)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:65%;background:var(--brand)"></span><span style="height:45%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:60%;background:var(--brand)"></span></div></td>
-        </tr>
-        <tr id="row-BBAS3" onclick="selectAsset('BBAS3')" tabindex="0">
-          <td><div class="ticker">BBAS3</div><div class="ticker-sub">Banco do Brasil · Bancos</div></td>
-          <td class="price td-price">R$ 28,75</td>
-          <td class="td-change up">▲ +1,42%</td>
-          <td>5,80</td><td>1,10</td>
-          <td style="color:var(--success);font-weight:600;">8,3%</td>
-          <td><div class="mini-chart"><span style="height:55%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span></div></td>
-        </tr>
+      <tbody id="assets-tbody">
+        <!-- skeleton rows renderizadas via JS -->
       </tbody>
     </table>
   </div>
 </main>
 
-<script src="/static/icons.js"></script>
-<script src="/static/api.js"></script>
+<script src="/static/icons.js?v=2"></script>
+<script src="/static/api.js?v=2"></script>
 <script>
-let selectedTicker = 'PETR4';
+// ─── Configuração ───────────────────────────────────────────────────────────
+const STORAGE_KEY = 'financeiro_carteira';
+const DEFAULT_TICKERS = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
+const INDEX_PROXY = 'BOVA11'; // ETF que replica o Ibovespa
 
-function selectAsset(ticker) {
-  selectedTicker = ticker;
-  document.querySelectorAll('#assets-table tbody tr').forEach(r => r.classList.remove('active'));
-  const row = document.getElementById(`row-${ticker}`);
-  if (row) row.classList.add('active');
-  carregarCard(ticker);
+let selectedTicker = 'PETR4';
+let portfolioCache = null;
+
+// ─── Boot: renderiza skeletons imediatamente ───────────────────────────────
+document.getElementById('cards-container').innerHTML =
+  skeletonCard() + skeletonCard() + skeletonCard() + skeletonCard();
+document.getElementById('alloc-body').innerHTML =
+  '<div class="loading-state"><span class="spinner"></span><span>Calculando…</span></div>';
+document.getElementById('assets-tbody').innerHTML =
+  skeletonTableRow(7) + skeletonTableRow(7) + skeletonTableRow(7) + skeletonTableRow(7);
+
+// ─── Help Legend (exata mesma função do relatório) ─────────────────────────
+document.getElementById('table-help-legend').innerHTML = helpLegend('legend-box', {
+  'Preço/Lucro': 'anos para recuperar o investimento. Menor = mais barato.',
+  'Preço/VP': 'abaixo de 1 = subvalorizado, acima de 1 = valorizado.',
+  'Rendimento de Dividendos': 'retorno anual em dividendos sobre o preço atual.',
+  'Variação': '▲ subiu / ▼ caiu no pregão de hoje.',
+  'Tendência (30d)': 'mini gráfico dos últimos 30 dias de negociação.',
+}, 'O que significam as colunas?');
+
+// ─── Carrega carteira do localStorage (helper) ─────────────────────────────
+function getPortfolio() {
+  if (portfolioCache) return portfolioCache;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    portfolioCache = raw ? JSON.parse(raw) : DEFAULT_TICKERS.map(t => ({ ticker: t, qty: 100, cost: 30 }));
+  } catch(e) {
+    portfolioCache = [];
+  }
+  return portfolioCache;
 }
 
-async function carregarCard(ticker) {
+// ─── Helper: busca statistics de todos os tickers (compartilhado) ──────────
+async function fetchAllStatistics(tickers) {
+  const timeout = (ms, p) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+  ]);
+  const results = await Promise.allSettled(tickers.map(t =>
+    timeout(3000, apiGet(`/api/quote/${t}/statistics`)).catch(() => null)
+  ));
+  return results.map(r => r.status === 'fulfilled' ? r.value : null);
+}
+
+// ─── Cards de indicadores ──────────────────────────────────────────────────
+async function carregarCards(statistics) {
+  const container = document.getElementById('cards-container');
+
+  const [idxQ, portfolioStats] = await Promise.allSettled([
+    apiGet(`/api/quote/${INDEX_PROXY}`).catch(() => null),
+    computePortfolioStats(),
+  ]);
+
+  const idx = idxQ.status === 'fulfilled' ? idxQ.value : null;
+  const ps  = portfolioStats.status === 'fulfilled' ? portfolioStats.value : null;
+
+  container.innerHTML = '';
+
+  // Card 1: IBOVESPA (via BOVA11)
+  if (idx && idx.price != null) {
+    container.insertAdjacentHTML('beforeend', cardHTML({
+      iconName: 'trendingUp',
+      label: 'IBOVESPA',
+      value: idx.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      sub: 'Principal índice da B3 (via BOVA11)',
+      change: idx.change_percent || 0,
+    }));
+  } else {
+    container.insertAdjacentHTML('beforeend', cardErrorHTML('IBOVESPA', 'trendingUp'));
+  }
+
+  // Card 2: Carteira
+  if (ps && ps.totalShares > 0) {
+    container.insertAdjacentHTML('beforeend', cardHTML({
+      iconName: 'wallet',
+      label: 'Valor da Carteira',
+      value: formatMoney(ps.totalValue),
+      sub: `${ps.positionCount} ativos · ${ps.totalShares.toLocaleString('pt-BR')} ações`,
+      change: ps.totalPct,
+    }));
+  } else {
+    container.insertAdjacentHTML('beforeend', cardErrorHTML('Carteira', 'wallet'));
+  }
+
+  // Card 3: Destaque (PETR4 por padrão)
+  const destaque = await carregarDestaque(selectedTicker);
+  if (destaque) container.appendChild(destaque);
+  else container.insertAdjacentHTML('beforeend', cardErrorHTML(selectedTicker, 'factory'));
+
+  // Card 4: DY Médio — usa statistics já carregados
+  const yields = statistics
+    .filter(s => s && s.dividend_yield != null && !isNaN(s.dividend_yield))
+    .map(s => s.dividend_yield);
+
+  if (yields.length > 0) {
+    const avgDy = (yields.reduce((a, b) => a + b, 0) / yields.length) * 100;
+    container.insertAdjacentHTML('beforeend', cardHTML({
+      iconName: 'droplets',
+      label: 'Rendimento Médio de Dividendos',
+      value: `${avgDy.toFixed(1)}%`,
+      sub: 'Média anual dos ativos da carteira',
+      change: null,
+    }));
+  } else {
+    container.insertAdjacentHTML('beforeend', cardErrorHTML('DY Médio', 'droplets'));
+  }
+
+  hydrateIcons(container);
+}
+
+function cardHTML({ iconName, label, value, sub, change }) {
+  let changeHTML = '';
+  if (change != null && !isNaN(change)) {
+    const isUp = change >= 0;
+    const cls = isUp ? 'up' : 'down';
+    const arrow = isUp ? '▲' : '▼';
+    const text = `${arrow} ${Math.abs(change).toFixed(2)}%`;
+    changeHTML = `<div class="card-change ${cls}">${icon('trendingUp', { size: 12 })} ${text}</div>`;
+  } else {
+    changeHTML = `<div class="card-change" style="color:var(--text-sec);">— estável</div>`;
+  }
+  return `<div class="card">
+    <div class="card-icon">${icon(iconName, { size: 18 })}</div>
+    <div class="card-label">${escapeHtml(label)}</div>
+    <div class="card-value">${escapeHtml(String(value))}</div>
+    <div class="card-sub">${escapeHtml(sub)}</div>
+    ${changeHTML}
+  </div>`;
+}
+
+function cardErrorHTML(label, iconName) {
+  return `<div class="card">
+    <div class="card-icon">${icon(iconName, { size: 18 })}</div>
+    <div class="card-label">${escapeHtml(label)}</div>
+    <div class="card-value" style="color:var(--text-sec);">—</div>
+    <div class="card-sub">Sem dados disponíveis</div>
+  </div>`;
+}
+
+async function carregarDestaque(ticker) {
   try {
     const q = await apiGet(`/api/quote/${ticker}`);
-    document.getElementById('card-destaque-ticker').textContent = ticker;
-    document.getElementById('card-destaque-price').textContent = formatMoney(q.price);
-    document.getElementById('card-destaque-change').innerHTML = formatChange(q.change_percent);
-    document.getElementById('card-destaque-change').className = 'card-change ' + (q.change_percent >= 0 ? 'up' : 'down');
-    document.getElementById('card-destaque-sub').textContent = 'Preço de fechamento mais recente';
+    const chgPct = q.change_percent || 0;
+    const cls = chgPct >= 0 ? 'up' : 'down';
+    const arrow = chgPct >= 0 ? '▲' : '▼';
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.id = 'card-destaque';
+    el.innerHTML = `
+      <div class="card-icon">${icon('factory', { size: 18 })}</div>
+      <div class="card-label">${escapeHtml(ticker)} · ${escapeHtml(q.shortName || '')}</div>
+      <div class="card-value">${formatMoney(q.price)}</div>
+      <div class="card-sub">Preço de fechamento mais recente</div>
+      <div class="card-change ${cls}">${icon('trendingUp', { size: 12 })} ${arrow} ${Math.abs(chgPct).toFixed(2)}% hoje</div>`;
+    return el;
   } catch(e) {
-    document.getElementById('card-destaque-price').textContent = 'Erro';
-    document.getElementById('card-destaque-ticker').textContent = ticker;
-    showToast(`Erro ao carregar ${ticker}`, 'error');
+    return null;
   }
-  await renderChart(ticker);
 }
 
+// ─── Stats da carteira ─────────────────────────────────────────────────────
+async function computePortfolioStats() {
+  const portfolio = getPortfolio();
+  if (!portfolio || portfolio.length === 0) return null;
+
+  const quotes = await Promise.all(portfolio.map(p =>
+    apiGet(`/api/quote/${p.ticker}`).catch(() => null)
+  ));
+
+  let totalValue = 0, totalCost = 0, totalShares = 0;
+  for (let i = 0; i < portfolio.length; i++) {
+    const q = quotes[i];
+    if (q && q.price) totalValue += q.price * portfolio[i].qty;
+    totalCost += portfolio[i].qty * portfolio[i].cost;
+    totalShares += portfolio[i].qty;
+  }
+
+  const totalPL = totalValue - totalCost;
+  const totalPct = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+
+  return { totalValue, totalCost, totalShares, totalPct, positionCount: portfolio.length, quotes, portfolio };
+}
+
+// ─── Mapeamento de setores (B3) ────────────────────────────────────────────
+const SECTOR_MAP = {
+  // Petróleo & Gás
+  'PETR3': 'Petróleo & Gás', 'PETR4': 'Petróleo & Gás',
+  'PRIO3': 'Petróleo & Gás', 'RRRP3': 'Petróleo & Gás',
+  // Mineração
+  'VALE3': 'Mineração',
+  // Bancos
+  'ITUB3': 'Bancos', 'ITUB4': 'Bancos',
+  'BBAS3': 'Bancos',
+  'BBDC3': 'Bancos', 'BBDC4': 'Bancos',
+  'SANB11': 'Bancos', 'SANB3': 'Bancos', 'SANB4': 'Bancos',
+  'BPAC3': 'Bancos', 'BPAC5': 'Bancos',
+  'NUBR33': 'Bancos',
+  // Energia Elétrica
+  'ELET3': 'Energia Elétrica', 'ELET6': 'Energia Elétrica',
+  'CPFE3': 'Energia Elétrica', 'EGIE3': 'Energia Elétrica',
+  'NEOE3': 'Energia Elétrica', 'TAEE11': 'Energia Elétrica',
+  'ENBR3': 'Energia Elétrica',
+  // Siderurgia
+  'CSNA3': 'Siderurgia', 'GGBR4': 'Siderurgia',
+  'USIM5': 'Siderurgia', 'CMIN3': 'Siderurgia',
+  // Alimentos & Bebidas
+  'ABEV3': 'Alimentos & Bebidas',
+  'JBSS3': 'Alimentos & Bebidas',
+  'BRFS3': 'Alimentos & Bebidas',
+  'MRFG3': 'Alimentos & Bebidas',
+  // Varejo
+  'MGLU3': 'Varejo', 'VIIA3': 'Varejo',
+  'LREN3': 'Varejo', 'RENT3': 'Varejo',
+  // Tecnologia
+  'LWSA3': 'Tecnologia', 'TOTS3': 'Tecnologia',
+  'CASH3': 'Tecnologia', 'POSI3': 'Tecnologia',
+  // Saúde
+  'HAPV3': 'Saúde', 'RADL3': 'Saúde',
+  'QUAL3': 'Saúde', 'FLRY3': 'Saúde',
+  // Telecom
+  'VIVT3': 'Telecom', 'TIMB3': 'Telecom',
+  // Indústria
+  'WEGE3': 'Indústria', 'EMBR3': 'Indústria',
+};
+
+function getSector(ticker) {
+  return SECTOR_MAP[ticker.toUpperCase()] || 'Outros';
+}
+
+const SECTOR_COLORS = {
+  'Petróleo & Gás':  '#d4a017',
+  'Mineração':       '#3b82f6',
+  'Bancos':          '#10b981',
+  'Energia Elétrica':'#f97316',
+  'Siderurgia':      '#8b5cf6',
+  'Alimentos & Bebidas':'#ec4899',
+  'Varejo':          '#14b8a6',
+  'Tecnologia':      '#6366f1',
+  'Saúde':           '#f43f5e',
+  'Telecom':         '#06b6d4',
+  'Indústria':       '#a855f7',
+  'Outros':          '#6b7280',
+};
+
+// ─── Distribuição da carteira (por setor) ──────────────────────────────────
+async function carregarDistribuicao() {
+  const ps = await computePortfolioStats().catch(() => null);
+  const body = document.getElementById('alloc-body');
+  const sub = document.getElementById('alloc-sub');
+
+  if (!ps || ps.totalValue <= 0) {
+    sub.textContent = 'Adicione ativos à carteira para ver a distribuição';
+    body.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Carteira vazia. Vá em Carteira para começar.</span></div>`;
+    hydrateIcons(body);
+    return;
+  }
+
+  // Agrupa por setor
+  const sectorValue = {};
+  ps.portfolio.forEach((item, i) => {
+    const sector = getSector(item.ticker);
+    const price = ps.quotes[i]?.price || item.cost;
+    const value = price * item.qty;
+    sectorValue[sector] = (sectorValue[sector] || 0) + value;
+  });
+
+  sub.textContent = `Distribuição por setor · Total ${formatMoney(ps.totalValue)}`;
+
+  const items = Object.entries(sectorValue)
+    .map(([sector, value]) => ({
+      label: sector,
+      value,
+      pct: (value / ps.totalValue) * 100,
+      color: SECTOR_COLORS[sector] || '#6b7280',
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  body.innerHTML = items.map(item => `
+    <div class="bar-section">
+      <div class="bar-row">
+        <span class="bar-label">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${item.color};"></span>
+          ${escapeHtml(item.label)}
+        </span>
+        <span class="bar-pct">${item.pct.toFixed(0)}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${item.pct.toFixed(1)}%;background:linear-gradient(90deg, ${item.color}, ${item.color}cc);"></div></div>
+    </div>
+  `).join('');
+}
+
+// ─── Tabela de ativos ──────────────────────────────────────────────────────
+async function carregarTabela(statistics) {
+  const tickers = DEFAULT_TICKERS;
+  const tbody = document.getElementById('assets-tbody');
+  const badge = document.getElementById('table-badge');
+
+  const results = await Promise.allSettled(tickers.map(t => apiGet(`/api/quote/${t}`)));
+
+  tbody.innerHTML = '';
+  let loaded = 0;
+
+  results.forEach((r, i) => {
+    const ticker = tickers[i];
+    const stats = statistics[i] || {};
+
+    if (r.status === 'fulfilled' && r.value) {
+      const q = r.value;
+      const chgPct = q.change_percent || 0;
+      const cls = chgPct >= 0 ? 'up' : 'down';
+      const arrow = chgPct >= 0 ? '▲' : '▼';
+
+      // Pega dados do statistics se disponível
+      const peRatio = stats.trailing_pe;
+      const pbRatio = stats.price_to_book;
+      const dy = stats.dividend_yield;
+
+      const peStr = peRatio != null ? peRatio.toFixed(2) : '-';
+      const pbStr = pbRatio != null ? pbRatio.toFixed(2) : '-';
+      const dyStr = dy != null ? (dy * 100).toFixed(1) + '%' : '-';
+
+      const tr = document.createElement('tr');
+      tr.id = `row-${ticker}`;
+      tr.tabIndex = 0;
+      tr.onclick = () => selectAsset(ticker);
+      tr.innerHTML = `
+        <td><div class="ticker">${escapeHtml(ticker)}</div><div class="ticker-sub">${escapeHtml(q.shortName || '-')}</div></td>
+        <td class="price td-price">${formatMoney(q.price)}</td>
+        <td class="td-change ${cls}">${arrow} ${Math.abs(chgPct).toFixed(2)}%</td>
+        <td>${peStr}</td>
+        <td>${pbStr}</td>
+        <td style="color:var(--success);font-weight:600;">${dyStr}</td>
+        <td><div class="mini-chart" id="mini-${ticker}">${skeleton('lines', { count: 3 })}</div></td>`;
+      tbody.appendChild(tr);
+      loaded++;
+      carregarMiniChart(ticker);
+    } else {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><div class="ticker">${escapeHtml(ticker)}</div><div class="ticker-sub" style="color:var(--danger);">erro</div></td>
+        <td colspan="6" style="color:var(--text-sec);">Falha ao carregar</td>`;
+      tbody.appendChild(tr);
+    }
+  });
+
+  badge.textContent = `Watchlist Principal · ${loaded} ativos`;
+  hydrateIcons(tbody);
+
+  // Suporte a teclado
+  tbody.querySelectorAll('tr').forEach(row => {
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const m = row.id && row.id.match(/^row-(.+)$/);
+        if (m) selectAsset(m[1]);
+      }
+    });
+  });
+}
+
+async function carregarMiniChart(ticker) {
+  try {
+    const data = await apiGet(`/api/quote/${ticker}/history?range=1mo&interval=1d`);
+    const prices = data.history || data.prices || data.results || [];
+    if (prices.length < 2) return;
+    const closes = prices.map(p => p.close || p.price || p).filter(x => x != null);
+    const max = Math.max(...closes), min = Math.min(...closes);
+    const range = max - min || 1;
+    const last = closes.slice(-7);
+    const html = last.map((v, i) => {
+      const pct = (v - min) / range;
+      const h = Math.max(20 + pct * 60, 15);
+      const color = i === last.length - 1 ? 'var(--brand)' : 'var(--text-sec)';
+      return `<span style="height:${h}%;background:${color};" title="${formatMoney(v)}"></span>`;
+    }).join('');
+    const target = document.getElementById(`mini-${ticker}`);
+    if (target) target.innerHTML = html;
+  } catch(e) { /* silencioso */ }
+}
+
+// ─── Seleção de ativo (destaque + gráfico) ─────────────────────────────────
+function selectAsset(ticker) {
+  selectedTicker = ticker;
+  document.querySelectorAll('#assets-tbody tr').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById(`row-${ticker}`);
+  if (row) row.classList.add('active');
+
+  // Substitui o card 3 pelo destaque
+  carregarDestaque(ticker).then(el => {
+    if (!el) return;
+    const cards = document.getElementById('cards-container').querySelectorAll('.card');
+    if (cards[2]) cards[2].replaceWith(el);
+    hydrateIcons(el);
+  });
+
+  renderChart(ticker);
+}
+
+// ─── Gráfico histórico ─────────────────────────────────────────────────────
 async function renderChart(ticker) {
   const container = document.getElementById('chart-container');
   const title = document.getElementById('chart-title');
@@ -230,13 +537,14 @@ async function renderChart(ticker) {
   window._chartTicker = ticker;
   window._showDivs = window._showDivs || false;
 
-  container.innerHTML = '<div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando…</span></div>';
+  container.innerHTML = '<div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando histórico…</span></div>';
 
   try {
     const data = await apiGet(`/api/quote/${ticker}/history?range=1y&interval=1mo`);
     const prices = data.history || data.prices || data.results || [];
     if (!prices || prices.length === 0) {
       container.innerHTML = `<div class="loading-state" style="width:100%;"><span data-icon="warning" data-icon-size="16"></span><span>Dados históricos indisponíveis</span></div>`;
+      hydrateIcons(container);
       return;
     }
 
@@ -279,7 +587,6 @@ async function renderChart(ticker) {
       </div>`;
     }
     container.innerHTML = html;
-    hydrateIcons(container);
 
     const sub = document.getElementById('chart-sub');
     if (sub) {
@@ -301,43 +608,60 @@ function toggleDividendos() {
   if (window._chartTicker) renderChart(window._chartTicker);
 }
 
-// Suporte a teclado nas linhas da tabela
-document.querySelectorAll('#assets-table tbody tr').forEach(row => {
-  row.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      const ticker = row.id.replace('row-', '');
-      selectAsset(ticker);
-    }
-  });
-});
-
-// Carrega dados dinâmicos do backend
-document.addEventListener('DOMContentLoaded', async () => {
-  const tickers = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
+// ─── Alerta bar (carrega do backend se logado) ─────────────────────────────
+async function carregarAlertBar() {
+  const bar = document.getElementById('alert-bar');
+  const text = document.getElementById('alert-bar-text');
+  const token = localStorage.getItem('token');
+  if (!token) return; // sem login, esconde o bar
 
   try {
-    await carregarCard('PETR4');
-    selectAsset('PETR4');
+    const r = await fetch('/me/alerts', { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.alerts || data.alerts.length === 0) return;
 
-    for (const ticker of tickers) {
-      try {
-        const q = await apiGet(`/api/quote/${ticker}`);
-        const row = document.getElementById(`row-${ticker}`);
-        if (row) {
-          row.querySelector('.td-price').textContent = formatMoney(q.price);
-          const ch = row.querySelector('.td-change');
-          ch.innerHTML = formatChange(q.change_percent);
-          ch.className = 'td-change ' + (q.change_percent >= 0 ? 'up' : 'down');
-        }
-      } catch(e) {
-        console.warn(`Erro ao carregar ${ticker}:`, e.message);
-      }
+    // Pega o alerta mais próximo de ser disparado
+    const pending = data.alerts.filter(a => !a.triggered);
+    if (pending.length === 0) return;
+
+    const a = pending[0];
+    let quote = null;
+    try { quote = await apiGet(`/api/quote/${a.ticker}`); } catch(e) {}
+
+    if (!quote || quote.price == null) return;
+
+    const dist = Math.abs(quote.price - a.target_price) / a.target_price;
+    const directionTxt = a.direction === 'above' ? 'acima' : 'abaixo';
+    const side = a.direction === 'above'
+      ? (quote.price >= a.target_price ? 'atingido' : 'de ser atingido')
+      : (quote.price <= a.target_price ? 'atingido' : 'de ser atingido');
+
+    if (a.direction === 'above' && quote.price < a.target_price) {
+      const distPct = (dist * 100).toFixed(0);
+      text.innerHTML = `<strong>${escapeHtml(a.ticker)}</strong> — Seu alerta de <strong>R$ ${Number(a.target_price).toFixed(2)} (${directionTxt})</strong> está a <strong>${distPct}%</strong> de ser atingido! Preço atual: ${formatMoney(quote.price)}`;
+      bar.style.display = 'flex';
     }
-  } catch(e) {
-    console.error('Erro ao carregar dashboard:', e.message);
-    showToast('Erro ao carregar dashboard', 'error');
-  }
+  } catch(e) {}
+}
+
+// ─── Inicialização ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Tema toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // Busca statistics uma vez, compartilha entre cards e tabela
+  const statistics = await fetchAllStatistics(DEFAULT_TICKERS);
+
+  // Carrega em paralelo
+  await Promise.allSettled([
+    carregarCards(statistics),
+    carregarTabela(statistics),
+    carregarDistribuicao(),
+    renderChart(selectedTicker),
+    carregarAlertBar(),
+  ]);
 });
 </script>
 </body>
