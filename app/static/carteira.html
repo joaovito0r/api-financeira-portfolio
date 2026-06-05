@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Financeira — Carteira</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d6a51c'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('total-positions').textContent = portfolio.length;
 
   const allocBar = document.getElementById('allocation-bar');
-  const SECTOR_COLORS = ['#d4a017','#3b82f6','#10b981','#f97316','#8b5cf6','#14b8a6'];
+  const SECTOR_COLORS = ['#d6a51c','#3b82f6','#10b981','#f97316','#8b5cf6','#14b8a6'];
   allocBar.innerHTML = portfolio.map((item, i) => {
     const pct = totalVal > 0 ? ((quotes[item.ticker]?.price || 0) * item.qty / totalVal) * 100 : 0;
     return `<div style="width:${Math.max(pct, 5)}%;background:${SECTOR_COLORS[i % SECTOR_COLORS.length]};" data-ticker="${item.ticker}" title="${item.ticker}: ${pct.toFixed(1)}%"></div>`;

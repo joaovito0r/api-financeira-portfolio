@@ -13,33 +13,33 @@
 
 /* ── Design Tokens ───────────────────────────────────────────────────────── */
 :root {
-  /* Surfaces */
-  --bg:           #0c0c0f;
-  --surface:      #141418;
-  --surface-2:    #1c1c22;
-  --surface-3:    #232329;
-  --border:       #2a2a33;
-  --border-soft:  #1f1f26;
+  /* Surfaces — fundo com leve tom azulado para profundidade */
+  --bg:           #0a0c11;
+  --surface:      #13151b;
+  --surface-2:    #1b1d25;
+  --surface-3:    #22242e;
+  --border:       #2b2d38;
+  --border-soft:  #1e2028;
 
-  /* Texto */
-  --text:         #e8e8ed;
-  --text-sec:     #88889a;
-  --text-muted:   #5a5a6a;
+  /* Texto — melhor contraste */
+  --text:         #eaeaef;
+  --text-sec:     #9191a6;
+  --text-muted:   #5c5c6e;
 
-  /* Marca (gold) */
-  --brand:        #d4a017;
-  --brand-hover:  #e8b830;
-  --brand-soft:   rgba(212, 160, 23, 0.15);
-  --brand-glow:   rgba(212, 160, 23, 0.4);
+  /* Marca (gold) — tom mais rico */
+  --brand:        #d6a51c;
+  --brand-hover:  #eab830;
+  --brand-soft:   rgba(214, 165, 28, 0.16);
+  --brand-glow:   rgba(214, 165, 28, 0.45);
 
-  /* Status */
-  --success:      #22c55e;
-  --danger:       #ef4444;
-  --warning:      #f59e0b;
-  --info:         #3b82f6;
+  /* Status — melhor visibilidade em dark mode */
+  --success:      #2dd46e;
+  --danger:       #f04444;
+  --warning:      #e8a817;
+  --info:         #4b9fff;
 
   /* Setores (usado em gráficos) */
-  --sector-gold:   #d4a017;
+  --sector-gold:   #d6a51c;
   --sector-blue:   #3b82f6;
   --sector-green:  #10b981;
   --sector-orange: #f97316;
@@ -52,7 +52,7 @@
 
   /* Tipografia */
   --font:    'Inter', system-ui, -apple-system, sans-serif;
-  --mono:    ui-monospace, 'Fira Code', SFMono-Regular, Menlo, monospace;
+  --mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Elevação (3 níveis) */
   --elev-1: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -488,7 +488,7 @@ img, svg { display: block; max-width: 100%; }
   align-items: center;
   gap: 8px;
 }
-.table-header h3 svg { width: 16px; height: 16px; color: var(--brand); }
+.table-header h3 > svg { width: 16px; height: 16px; color: var(--brand); }
 
 .badge {
   background: var(--brand-soft);
@@ -673,7 +673,7 @@ tbody tr.active { background: var(--brand-soft); }
   align-items: center;
   gap: 8px;
 }
-.modal h2 svg { width: 18px; height: 18px; color: var(--brand); }
+.modal h2 > svg { width: 18px; height: 18px; color: var(--brand); }
 .modal .sub {
   font-size: 11px;
   color: var(--text-sec);
