@@ -1,0 +1,50 @@
+"""
+Schemas Pydantic para autenticação.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class UserCreate(BaseModel):
+    """Schema de registro de usuário."""
+
+    name: str = Field(..., min_length=2, max_length=100, description="Nome do usuário")
+    email: EmailStr = Field(..., description="Email do usuário")
+    password: str = Field(
+        ..., min_length=8, max_length=128, description="Senha (mínimo 8 caracteres)"
+    )
+
+
+class UserLogin(BaseModel):
+    """Schema de login."""
+
+    email: EmailStr = Field(..., description="Email do usuário")
+    password: str = Field(..., description="Senha")
+
+
+class UserResponse(BaseModel):
+    """Resposta com dados do usuário (sem senha)."""
+
+    id: str = Field(..., description="UUID do usuário")
+    name: str = Field(..., description="Nome")
+    email: str = Field(..., description="Email")
+    created_at: datetime = Field(..., description="Data de criação")
+
+
+class TokenResponse(BaseModel):
+    """Resposta com token JWT."""
+
+    access_token: str = Field(..., description="Token JWT")
+    token_type: str = Field("bearer", description="Tipo do token")
+    user: UserResponse = Field(..., description="Dados do usuário")
+
+
+class ErrorResponse(BaseModel):
+    """Resposta padrão para erros."""
+
+    detail: str = Field(..., description="Mensagem de erro")

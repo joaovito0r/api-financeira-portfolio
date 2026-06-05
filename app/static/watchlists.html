@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Watchlists</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    /* Estilos específicos Watchlists */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .tab {
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--t-fast) var(--ease);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab:hover { border-color: var(--brand); color: var(--text); }
+    .tab.active {
+      background: var(--brand-soft);
+      border-color: var(--brand);
+      color: var(--brand-hover);
+      font-weight: 600;
+    }
+    .tab .cnt {
+      font-size: 10px;
+      background: var(--surface-2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      font-family: var(--mono);
+    }
+    .tab.active .cnt { background: rgba(212, 160, 23, 0.2); color: var(--brand-hover); }
+    .tab-add {
+      width: 36px;
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--text-sec);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .tab-add:hover { border-color: var(--brand); color: var(--brand-hover); }
+
+    .search-row { position: relative; display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+    .search-row input {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color var(--t-fast) var(--ease);
+    }
+    .search-row input:focus { border-color: var(--brand); }
+    .suggestions {
+      display: none;
+      position: absolute;
+      top: 42px; left: 0; right: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: var(--elev-2);
+    }
+    .suggestions.show { display: block; }
+    .suggestions .sug-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .suggestions .sug-item:last-child { border: 0; }
+    .suggestions .sug-item:hover { background: var(--surface-3); }
+    .suggestions .sug-item .sug-name { color: var(--text-sec); }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .wl-card {
+      padding: 16px;
+    }
+    .wl-card .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .wl-card .left { display: flex; align-items: center; gap: 10px; }
+    .wl-card .icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wl-card .icon svg { width: 18px; height: 18px; }
+    .wl-card .name h3 { font-size: 15px; font-weight: 600; color: #fff; }
+    .wl-card .name .sub { font-size: 10px; color: var(--text-sec); }
+    .wl-card .del {
+      background: none; border: none;
+      color: var(--text-sec);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all var(--t-fast) var(--ease);
+      display: inline-flex;
+    }
+    .wl-card .del:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+    .wl-card .mid { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+    .wl-card .price { font-size: 22px; font-weight: 700; color: #fff; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .wl-card .change { font-size: 13px; font-weight: 600; font-family: var(--mono); }
+    .wl-card .footer {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-sec);
+      padding-top: 8px; border-top: 1px solid var(--border-soft);
+    }
+    .wl-card .footer span { display: flex; align-items: center; gap: 4px; }
+    .wl-card .footer .n { color: var(--text); font-weight: 500; font-family: var(--mono); }
+
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item active" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header">
+    <h1>Watchlists</h1>
+    <button class="btn btn-primary" onclick="criarWatchlist()">
+      <span data-icon="plus" data-icon-size="14"></span> Nova Lista
+    </button>
+  </div>
+
+  <div class="tabs" id="tabs-container"></div>
+
+  <div class="search-row">
+    <input id="add-ticker-input" placeholder="Buscar e adicionar ativo..." aria-label="Buscar ativo" onkeydown="if(event.key==='Enter') adicionarItem()" oninput="buscarAtivos(this.value)">
+    <div class="suggestions" id="suggestions"></div>
+    <button class="btn btn-primary" onclick="adicionarItem()">
+      <span data-icon="plus" data-icon-size="14"></span> Adicionar
+    </button>
+  </div>
+
+  <div id="items-area">
+    <div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+let token = localStorage.getItem('token');
+let currentWlId = null;
+let wlData = [];
+
+async function autoLogin() {
+  if (!token) {
+    try {
+      const r = await fetch('/auth/login', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email:'test@test.com', password:'12345678'})
+      });
+      if (r.ok) { const d = await r.json(); token = d.access_token; localStorage.setItem('token', token); }
+    } catch(e) {}
+  }
+  if (token) carregarTudo();
+  else {
+    const area = document.getElementById('items-area');
+    area.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login para acessar suas watchlists</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+async function carregarTudo() {
+  const area = document.getElementById('items-area');
+  area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
+  try {
+    const r = await fetch('/me/watchlists', {headers:{'Authorization':`Bearer ${token}`}});
+    if (!r.ok) throw new Error('auth failed');
+    const d = await r.json();
+    wlData = d.watchlists || [];
+    renderTabs();
+    if (wlData.length > 0) selecionarWl(wlData[0].id);
+    else area.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Nenhuma watchlist ainda. Crie uma!</span></div>`;
+    hydrateIcons(area);
+  } catch(e) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+function renderTabs() {
+  const c = document.getElementById('tabs-container');
+  c.innerHTML = '';
+  wlData.forEach(w => {
+    c.innerHTML += `<div class="tab ${w.id === currentWlId ? 'active':''}" onclick="selecionarWl('${w.id}')" tabindex="0" role="tab">${escapeHtml(w.name || 'Sem nome')} <span class="cnt">${w.item_count||0}</span></div>`;
+  });
+  c.innerHTML += `<button class="tab-add" onclick="criarWatchlist()" title="Nova watchlist" aria-label="Nova watchlist">+</button>`;
+}
+
+async function selecionarWl(id) {
+  currentWlId = id;
+  renderTabs();
+  const area = document.getElementById('items-area');
+  area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
+  try {
+    const r = await fetch(`/me/watchlists/${id}/items`, {headers:{'Authorization':`Bearer ${token}`}});
+    const d = await r.json();
+    const tickers = d.items || [];
+    if (tickers.length === 0) {
+      area.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Lista vazia. Adicione tickers!</span></div>`;
+      hydrateIcons(area);
+      return;
+    }
+    let html = '<div class="grid">';
+    for (const t of tickers) {
+      const ticker = t.ticker || t;
+      try {
+        const q = await apiGet(`/api/quote/${ticker}`);
+        const change = q.change_percent || 0;
+        const chgCls = change >= 0 ? 'up' : 'down';
+        const chgIcon = change >= 0 ? '▲' : '▼';
+        html += `<div class="card wl-card" onclick="window.location='/static/relatorio.html?${ticker}'" tabindex="0" role="button">
+          <div class="top">
+            <div class="left"><div class="icon" data-icon="trendingUp"></div>
+            <div class="name"><h3>${escapeHtml(ticker)}</h3><div class="sub">${escapeHtml(q.shortName || '-')}</div></div></div>
+            <button class="del" onclick="event.stopPropagation();removerItem('${id}','${ticker}')" aria-label="Remover ${ticker}">${icon('x', { size: 14 })}</button>
+          </div>
+          <div class="mid"><div class="price">${formatMoney(q.price)}</div><div class="change ${chgCls}">${chgIcon} ${Math.abs(change).toFixed(2)}%</div></div>
+          <div class="footer">
+            <span>P/L <span class="n">${q.pe_ratio || '-'}</span></span>
+            <span>DY <span class="n up">${q.dividend_yield ? (q.dividend_yield*100).toFixed(1)+'%' : '-'}</span></span>
+          </div>
+        </div>`;
+      } catch(e) {
+        html += `<div class="card wl-card"><div class="name"><h3>${escapeHtml(ticker)}</h3><div class="sub">Erro ao carregar</div></div></div>`;
+      }
+    }
+    html += '</div>';
+    area.innerHTML = html;
+    hydrateIcons(area);
+  } catch(e) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+async function criarWatchlist() {
+  const nome = await showPrompt('Nova Watchlist', 'Nome da lista');
+  if (!nome) return;
+  try {
+    await fetch(`/me/watchlists?name=${encodeURIComponent(nome)}`, {
+      method:'POST', headers:{'Authorization':`Bearer ${token}`}
+    });
+    showToast('Watchlist criada', 'success');
+    carregarTudo();
+  } catch(e) { showAlert('Erro: '+e.message, 'Erro'); }
+}
+
+async function removerItem(wlId, ticker) {
+  const ok = await showConfirm(`Remover ${ticker} da watchlist?`, 'Remover', { danger: true });
+  if (!ok) return;
+  try {
+    await fetch(`/me/watchlists/${wlId}/items/${ticker}`, {
+      method:'DELETE', headers:{'Authorization':`Bearer ${token}`}
+    });
+    showToast(`${ticker} removido`, 'success');
+    selecionarWl(wlId);
+  } catch(e) { showAlert('Erro: '+e.message, 'Erro'); }
+}
+
+let searchTimeout;
+async function buscarAtivos(query) {
+  clearTimeout(searchTimeout);
+  const sug = document.getElementById('suggestions');
+  if (!query || query.length < 2) { sug.classList.remove('show'); return; }
+  searchTimeout = setTimeout(async () => {
+    try {
+      const r = await apiGet(`/api/assets?search=${encodeURIComponent(query)}&limit=6`);
+      const items = r.stocks || r.assets || [];
+      if (items.length === 0) { sug.classList.remove('show'); return; }
+      sug.innerHTML = items.map(a => {
+        const tk = a.ticker || a.stock || a;
+        return `<div class="sug-item" data-ticker="${tk}"><strong>${tk}</strong><span class="sug-name">${escapeHtml(a.name || a.longName || '')}</span></div>`;
+      }).join('');
+      sug.classList.add('show');
+      sug.querySelectorAll('.sug-item').forEach(item => {
+        item.addEventListener('click', () => {
+          document.getElementById('add-ticker-input').value = item.dataset.ticker;
+          sug.classList.remove('show');
+        });
+      });
+    } catch(e) { sug.classList.remove('show'); }
+  }, 300);
+}
+
+async function adicionarItem() {
+  if (!token || !currentWlId) { showAlert('Selecione uma watchlist primeiro', 'Atenção'); return; }
+  const input = document.getElementById('add-ticker-input');
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  try {
+    const r = await fetch(`/me/watchlists/${currentWlId}/items?ticker=${ticker}`, {
+      method:'POST', headers:{'Authorization':`Bearer ${token}`}
+    });
+    if (!r.ok) { const e = await r.json(); showAlert(e.detail || 'Erro ao adicionar', 'Erro'); return; }
+    input.value = '';
+    document.getElementById('suggestions').classList.remove('show');
+    showToast(`${ticker} adicionado`, 'success');
+    selecionarWl(currentWlId);
+  } catch(e) { showAlert('Erro: '+e.message, 'Erro'); }
+}
+
+// Fechar sugestões ao clicar fora
+document.addEventListener('click', e => {
+  const sug = document.getElementById('suggestions');
+  if (sug && !e.target.closest('.search-row')) sug.classList.remove('show');
+});
+
+document.addEventListener('DOMContentLoaded', autoLogin);
+</script>
+</body>
+</html>

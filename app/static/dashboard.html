@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item active" href="/">
+    <span data-icon="chart"></span> Dashboard
+  </a>
+  <a class="sidebar-item" href="/static/carteira.html">
+    <span data-icon="wallet"></span> Carteira
+  </a>
+  <a class="sidebar-item" href="/static/watchlists.html">
+    <span data-icon="star"></span> Watchlists
+  </a>
+  <a class="sidebar-item" href="/static/comparar.html">
+    <span data-icon="compare"></span> Comparar
+  </a>
+  <a class="sidebar-item" href="/static/relatorio.html">
+    <span data-icon="report"></span> Relatório
+  </a>
+  <a class="sidebar-item" href="/static/alertas.html">
+    <span data-icon="bell"></span> Alertas
+  </a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html">
+    <span data-icon="user"></span> Perfil
+  </a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header">
+    <h1>Dashboard</h1>
+    <div class="header-right">
+      <input class="search-box" id="search-input" placeholder="Buscar ativo (ex: PETR4)" aria-label="Buscar ativo" onkeydown="if(event.key==='Enter') window.location='/static/relatorio.html?'+this.value">
+      <div class="avatar" onclick="window.location='/static/perfil.html'" role="button" tabindex="0" aria-label="Perfil">J</div>
+    </div>
+  </div>
+
+  <div class="alert-bar" onclick="window.location='/static/alertas.html'" role="button" tabindex="0">
+    <span class="alert-icon" data-icon="bell"></span>
+    <span><strong>PETR4</strong> — Seu alerta de <strong>R$ 45,00 (above)</strong> está a <strong>7%</strong> de ser atingido! Preço atual: R$ 42,00</span>
+    <span class="alert-arrow">Ver alertas <span data-icon="arrowRight" data-icon-size="12"></span></span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon" data-icon="trendingUp"></div>
+      <div class="card-label">IBOVESPA</div>
+      <div class="card-value" id="card-ibov-value">132.584</div>
+      <div class="card-sub">Principal índice da B3 (bolsa brasileira)</div>
+      <div class="card-change up" id="card-ibov-change"><span data-icon="trendingUp" data-icon-size="12"></span> ▲ +1,24% hoje</div>
+    </div>
+    <div class="card">
+      <div class="card-icon" data-icon="coins"></div>
+      <div class="card-label">Valor da Carteira</div>
+      <div class="card-value" id="card-wallet-value">R$ 47.320</div>
+      <div class="card-sub" id="card-wallet-sub">4 ativos · 550 ações no total</div>
+      <div class="card-change up" id="card-wallet-change">▲ +3,82% hoje</div>
+    </div>
+    <div class="card" id="card-destaque">
+      <div class="card-icon" data-icon="factory"></div>
+      <div class="card-label" id="card-destaque-ticker">PETR4 · PETROBRAS</div>
+      <div class="card-value" id="card-destaque-price">R$ 42,00</div>
+      <div class="card-sub" id="card-destaque-sub">Preço de fechamento mais recente</div>
+      <div class="card-change down" id="card-destaque-change">▼ -1,20% hoje</div>
+    </div>
+    <div class="card">
+      <div class="card-icon" data-icon="droplets"></div>
+      <div class="card-label">Dividend Yield Médio</div>
+      <div class="card-value">7,0%</div>
+      <div class="card-sub">Média dos proventos da sua carteira</div>
+      <div class="card-change up">▲ +0,3% no mês</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;flex-wrap:wrap;gap:8px;">
+        <h3><span data-icon="bar"></span> <span id="chart-title">PETR4</span> — Preço nos Últimos 12 Meses</h3>
+        <button id="chart-toggle" class="btn btn-outline btn-sm" onclick="toggleDividendos()" aria-label="Alternar entre preço e dividendos">
+          <span data-icon="bar" data-icon-size="12"></span> <span id="chart-toggle-text">Preço</span>
+        </button>
+      </div>
+      <div class="chart-sub" id="chart-sub">Cada barra representa o fechamento do mês · Valores em R$</div>
+      <div class="chart-wrap" id="chart-container">
+        <div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando…</span></div>
+      </div>
+    </div>
+    <div class="chart-box">
+      <h3><span data-icon="pie"></span> Distribuição da Carteira</h3>
+      <div class="chart-sub">Porcentagem investida em cada setor</div>
+      <div style="margin-top:4px;">
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-gold);"></span>Petróleo &amp; Gás</span><span class="bar-pct">35%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:35%;background:linear-gradient(90deg,#d4a017,#e8b830);"></div></div>
+        </div>
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-blue);"></span>Mineração</span><span class="bar-pct">25%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:25%;background:linear-gradient(90deg,#2563eb,#3b82f6);"></div></div>
+        </div>
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-green);"></span>Bancos</span><span class="bar-pct">20%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:20%;background:linear-gradient(90deg,#059669,#10b981);"></div></div>
+        </div>
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-orange);"></span>Energia</span><span class="bar-pct">12%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:12%;background:linear-gradient(90deg,#ea580c,#f97316);"></div></div>
+        </div>
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sector-violet);"></span>Outros</span><span class="bar-pct">8%</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:8%;background:linear-gradient(90deg,#7c3aed,#8b5cf6);"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h3><span data-icon="factory"></span> Principais Ativos</h3>
+        <div style="position:relative;">
+          <button class="btn btn-icon btn-ghost btn-sm" onclick="document.getElementById('legend-box').classList.toggle('legend')" aria-label="Ajuda sobre as colunas" style="width:18px;height:18px;border-radius:50%;border:1px solid var(--border);">
+            <span data-icon="help" data-icon-size="12"></span>
+          </button>
+          <div class="legend" id="legend-box" style="display:none;position:absolute;top:28px;left:0;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text-sec);width:280px;z-index:10;line-height:1.6;box-shadow:var(--elev-2);">
+            <strong style="color:var(--text);display:block;margin-bottom:6px;">O que significam as colunas?</strong>
+            <span><strong style="color:var(--text);">Preço/Lucro:</strong> anos para recuperar o investimento</span><br>
+            <span><strong style="color:var(--text);">Preço/VP:</strong> &lt;1 = subvalorizado, &gt;1 = valorizado</span><br>
+            <span><strong style="color:var(--text);">DY:</strong> retorno anual em dividendos</span><br>
+            <span><strong style="color:var(--text);">Variação:</strong> ▲ subiu / ▼ caiu hoje</span><br>
+            <span><strong style="color:var(--text);">Tendência:</strong> mini gráfico dos últimos 30 dias</span>
+          </div>
+        </div>
+      </div>
+      <span class="badge">Watchlist Principal · 4 ativos</span>
+    </div>
+    <table id="assets-table">
+      <thead><tr>
+        <th scope="col">Ativo</th><th scope="col">Preço</th><th scope="col">Variação</th><th scope="col">Preço/Lucro</th><th scope="col">Preço/VP</th><th scope="col">Dividend Yield</th><th scope="col">Tendência (30d)</th>
+      </tr></thead>
+      <tbody>
+        <tr id="row-PETR4" onclick="selectAsset('PETR4')" tabindex="0">
+          <td><div class="ticker">PETR4</div><div class="ticker-sub">Petrobras · Petróleo</div></td>
+          <td class="price td-price">R$ 42,00</td>
+          <td class="td-change down">▼ -1,20%</td>
+          <td>5,57</td><td>1,21</td>
+          <td style="color:var(--success);font-weight:600;">7,0%</td>
+          <td><div class="mini-chart"><span style="height:60%;background:var(--text-sec)"></span><span style="height:45%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span></div></td>
+        </tr>
+        <tr id="row-VALE3" onclick="selectAsset('VALE3')" tabindex="0">
+          <td><div class="ticker">VALE3</div><div class="ticker-sub">Vale · Mineração</div></td>
+          <td class="price td-price">R$ 58,30</td>
+          <td class="td-change up">▲ +0,80%</td>
+          <td>4,20</td><td>1,05</td>
+          <td style="color:var(--success);font-weight:600;">9,2%</td>
+          <td><div class="mini-chart"><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:85%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span></div></td>
+        </tr>
+        <tr id="row-ITUB4" onclick="selectAsset('ITUB4')" tabindex="0">
+          <td><div class="ticker">ITUB4</div><div class="ticker-sub">Itaú Unibanco · Bancos</div></td>
+          <td class="price td-price">R$ 35,20</td>
+          <td class="td-change up">▲ +0,35%</td>
+          <td>8,10</td><td>1,45</td>
+          <td style="color:var(--success);font-weight:600;">5,4%</td>
+          <td><div class="mini-chart"><span style="height:50%;background:var(--text-sec)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:65%;background:var(--brand)"></span><span style="height:45%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span><span style="height:60%;background:var(--brand)"></span></div></td>
+        </tr>
+        <tr id="row-BBAS3" onclick="selectAsset('BBAS3')" tabindex="0">
+          <td><div class="ticker">BBAS3</div><div class="ticker-sub">Banco do Brasil · Bancos</div></td>
+          <td class="price td-price">R$ 28,75</td>
+          <td class="td-change up">▲ +1,42%</td>
+          <td>5,80</td><td>1,10</td>
+          <td style="color:var(--success);font-weight:600;">8,3%</td>
+          <td><div class="mini-chart"><span style="height:55%;background:var(--text-sec)"></span><span style="height:75%;background:var(--brand)"></span><span style="height:60%;background:var(--text-sec)"></span><span style="height:80%;background:var(--brand)"></span><span style="height:65%;background:var(--text-sec)"></span><span style="height:70%;background:var(--brand)"></span><span style="height:55%;background:var(--text-sec)"></span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+let selectedTicker = 'PETR4';
+
+function selectAsset(ticker) {
+  selectedTicker = ticker;
+  document.querySelectorAll('#assets-table tbody tr').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById(`row-${ticker}`);
+  if (row) row.classList.add('active');
+  carregarCard(ticker);
+}
+
+async function carregarCard(ticker) {
+  try {
+    const q = await apiGet(`/api/quote/${ticker}`);
+    document.getElementById('card-destaque-ticker').textContent = ticker;
+    document.getElementById('card-destaque-price').textContent = formatMoney(q.price);
+    document.getElementById('card-destaque-change').innerHTML = formatChange(q.change_percent);
+    document.getElementById('card-destaque-change').className = 'card-change ' + (q.change_percent >= 0 ? 'up' : 'down');
+    document.getElementById('card-destaque-sub').textContent = 'Preço de fechamento mais recente';
+  } catch(e) {
+    document.getElementById('card-destaque-price').textContent = 'Erro';
+    document.getElementById('card-destaque-ticker').textContent = ticker;
+    showToast(`Erro ao carregar ${ticker}`, 'error');
+  }
+  await renderChart(ticker);
+}
+
+async function renderChart(ticker) {
+  const container = document.getElementById('chart-container');
+  const title = document.getElementById('chart-title');
+  if (!container) return;
+  title.textContent = ticker;
+  window._chartTicker = ticker;
+  window._showDivs = window._showDivs || false;
+
+  container.innerHTML = '<div class="loading-state" style="width:100%;"><span class="spinner"></span><span>Carregando…</span></div>';
+
+  try {
+    const data = await apiGet(`/api/quote/${ticker}/history?range=1y&interval=1mo`);
+    const prices = data.history || data.prices || data.results || [];
+    if (!prices || prices.length === 0) {
+      container.innerHTML = `<div class="loading-state" style="width:100%;"><span data-icon="warning" data-icon-size="16"></span><span>Dados históricos indisponíveis</span></div>`;
+      return;
+    }
+
+    const closes = prices.map(p => ({ close: p.close || p.price || p, date: p.trade_date || '' }));
+    const max = Math.max(...closes.map(c => c.close));
+    const min = Math.min(...closes.map(c => c.close));
+    const range = max - min || 1;
+
+    const last12 = closes.slice(-12);
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const now = new Date();
+    const chartH = container.clientHeight || 170;
+
+    let divsByMonth = {};
+    if (window._showDivs) {
+      try {
+        const dd = await apiGet(`/api/dividends/${ticker}`);
+        const allDivs = dd.dividends || [];
+        for (const d of allDivs) {
+          const m = d.payment_date ? d.payment_date.substring(0,7) : '';
+          if (m) divsByMonth[m] = (divsByMonth[m] || 0) + (d.value || 0);
+        }
+      } catch(e) {}
+    }
+
+    let html = '';
+    for (let i = 0; i < last12.length; i++) {
+      const pct = ((last12[i].close - min) / range);
+      const px = Math.max(pct * chartH * 0.8, 8);
+      const mi = (now.getMonth() - (last12.length - 1 - i) + 12) % 12;
+      const dateStr = last12[i].date ? last12[i].date.substring(0,7) : '';
+      const divVal = divsByMonth[dateStr] || 0;
+
+      html += `<div class="chart-col">
+        <div class="chart-value-label">${formatMoney(last12[i].close)}</div>
+        ${window._showDivs && divVal > 0 ? `<div style="color:var(--success);font-size:9px;margin-bottom:1px;">${formatMoney(divVal)}</div>` : ''}
+        <div class="chart-bar" style="height:${px.toFixed(0)}px"></div>
+        ${window._showDivs && divVal > 0 ? `<div style="height:3px;background:var(--success);border-radius:2px;width:60%;margin:1px 0;"></div>` : ''}
+        <span class="chart-label">${months[mi]}</span>
+      </div>`;
+    }
+    container.innerHTML = html;
+    hydrateIcons(container);
+
+    const sub = document.getElementById('chart-sub');
+    if (sub) {
+      sub.textContent = window._showDivs
+        ? 'Barras douradas = preço · Barras verdes = dividendos pagos no mês'
+        : 'Cada barra representa o fechamento do mês · Valores em R$';
+    }
+    const btnText = document.getElementById('chart-toggle-text');
+    if (btnText) btnText.textContent = window._showDivs ? 'Preço+Div' : 'Preço';
+
+  } catch(e) {
+    container.innerHTML = `<div class="loading-state" style="width:100%;"><span data-icon="warning" data-icon-size="16"></span><span>Dados históricos indisponíveis</span></div>`;
+    hydrateIcons(container);
+  }
+}
+
+function toggleDividendos() {
+  window._showDivs = !window._showDivs;
+  if (window._chartTicker) renderChart(window._chartTicker);
+}
+
+// Suporte a teclado nas linhas da tabela
+document.querySelectorAll('#assets-table tbody tr').forEach(row => {
+  row.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const ticker = row.id.replace('row-', '');
+      selectAsset(ticker);
+    }
+  });
+});
+
+// Carrega dados dinâmicos do backend
+document.addEventListener('DOMContentLoaded', async () => {
+  const tickers = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
+
+  try {
+    await carregarCard('PETR4');
+    selectAsset('PETR4');
+
+    for (const ticker of tickers) {
+      try {
+        const q = await apiGet(`/api/quote/${ticker}`);
+        const row = document.getElementById(`row-${ticker}`);
+        if (row) {
+          row.querySelector('.td-price').textContent = formatMoney(q.price);
+          const ch = row.querySelector('.td-change');
+          ch.innerHTML = formatChange(q.change_percent);
+          ch.className = 'td-change ' + (q.change_percent >= 0 ? 'up' : 'down');
+        }
+      } catch(e) {
+        console.warn(`Erro ao carregar ${ticker}:`, e.message);
+      }
+    }
+  } catch(e) {
+    console.error('Erro ao carregar dashboard:', e.message);
+    showToast('Erro ao carregar dashboard', 'error');
+  }
+});
+</script>
+</body>
+</html>

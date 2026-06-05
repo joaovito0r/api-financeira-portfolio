@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Carteira</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    /* Estilos específicos da página Carteira */
+    .total-card {
+      background: linear-gradient(135deg, var(--brand-soft), transparent);
+      border: 1px solid rgba(212, 160, 23, 0.25);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .total-left .label,
+    .total-right .label {
+      font-size: 11px;
+      color: var(--text-sec);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .total-left .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--mono);
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .total-right { text-align: right; }
+    .total-right .pct { font-size: 18px; font-weight: 700; margin-top: 4px; font-family: var(--mono); }
+    .total-right .abs { font-size: 12px; color: var(--text-sec); margin-top: 2px; font-family: var(--mono); }
+
+    .allocation-bar {
+      display: flex;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 10px 0 0;
+      max-width: 300px;
+      gap: 2px;
+    }
+    .allocation-bar div { height: 100%; border-radius: 3px; transition: opacity var(--t-fast) var(--ease); }
+    .allocation-bar div:hover { opacity: 0.7; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    /* Card de posição (extensão do .card) */
+    .pos-card {
+      cursor: pointer;
+      padding: 16px;
+    }
+    .pos-card .delete-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 24px; height: 24px;
+      border-radius: 4px;
+      border: none;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast) var(--ease);
+      z-index: 2;
+    }
+    .pos-card .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+      transform: scale(1.1);
+    }
+    .pos-card .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .pos-card .card-company { display: flex; align-items: center; gap: 10px; }
+    .pos-card .icon-box {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pos-card .icon-box svg { width: 18px; height: 18px; }
+    .pos-card .icon-gold   { background: rgba(212, 160, 23, 0.2); color: var(--brand); }
+    .pos-card .icon-blue   { background: rgba(59, 130, 246, 0.2);  color: var(--sector-blue); }
+    .pos-card .icon-green  { background: rgba(16, 185, 129, 0.2);  color: var(--sector-green); }
+    .pos-card .icon-orange { background: rgba(249, 115, 22, 0.2);  color: var(--sector-orange); }
+    .pos-card .icon-violet { background: rgba(139, 92, 246, 0.2);  color: var(--sector-violet); }
+    .pos-card .icon-teal   { background: rgba(20, 184, 166, 0.2);  color: #14b8a6; }
+
+    .pos-card .card-name h3 { font-size: 14px; font-weight: 600; color: #fff; }
+    .pos-card .card-name .sub { font-size: 10px; color: var(--text-sec); }
+
+    .pos-card .card-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .pos-card .card-badge.up   { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
+    .pos-card .card-badge.down { background: rgba(239, 68, 68, 0.15);  color: var(--danger); }
+
+    .pos-card .card-mid {
+      display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;
+    }
+    .pos-card .card-value {
+      font-size: 20px; font-weight: 700; color: #fff;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .pos-card .card-qty { font-size: 11px; color: var(--text-sec); font-family: var(--mono); }
+    .pos-card .pct-bar {
+      height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; margin-top: 6px;
+    }
+    .pos-card .pct-bar div {
+      height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+      border-radius: 2px; transition: width var(--t-slow) var(--ease);
+    }
+
+    .pos-card .card-info-row {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-sec);
+      padding-top: 8px; margin-top: 8px;
+      border-top: 1px solid var(--border-soft);
+    }
+    .pos-card .card-info-row .val { color: var(--text); font-weight: 500; font-family: var(--mono); }
+
+    /* Resumo inferior (4 stats) */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .summary-grid .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+    }
+    .summary-grid .stat .stat-label { font-size: 11px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.3px; }
+    .summary-grid .stat .stat-value {
+      font-size: 18px; font-weight: 700; color: #fff; font-family: var(--mono);
+      margin-top: 4px; font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item active" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header">
+    <h1>Carteira</h1>
+    <button class="btn btn-primary" onclick="abrirModal()">
+      <span data-icon="plus" data-icon-size="14"></span> Novo Ativo
+    </button>
+  </div>
+
+  <div class="total-card">
+    <div class="total-left">
+      <div class="label">Valor Total</div>
+      <div class="value" id="total-value">R$ 0</div>
+      <div class="allocation-bar" id="allocation-bar"></div>
+    </div>
+    <div class="total-right">
+      <div class="label">Retorno Total</div>
+      <div class="pct up" id="total-return">▲ +0,0%</div>
+      <div class="abs" id="total-profit">+R$ 0</div>
+    </div>
+  </div>
+
+  <div class="grid" id="positions-grid"></div>
+
+  <div class="summary-grid">
+    <div class="stat">
+      <div class="stat-label">Total Ações</div>
+      <div class="stat-value" id="total-shares">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Lucro Total</div>
+      <div class="stat-value" style="color:var(--success);" id="total-profit-abs">R$ 0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">DY Médio</div>
+      <div class="stat-value" id="avg-dy">-</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Posições</div>
+      <div class="stat-value" id="total-positions">0</div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Adicionar -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title"><span data-icon="plus" data-icon-size="18"></span> Novo Ativo</h2>
+    <div class="sub">Adicione um ativo à sua carteira</div>
+    <label for="modal-ticker">Ticker do ativo</label>
+    <input id="modal-ticker" placeholder="Ex: PETR4, VALE3, ITUB4" maxlength="10" onkeydown="if(event.key==='Enter') confirmarModal()">
+    <label for="modal-qty">Quantidade de ações</label>
+    <input id="modal-qty" type="number" placeholder="Ex: 100" min="1" onkeydown="if(event.key==='Enter') confirmarModal()">
+    <label for="modal-cost">Preço médio de compra (R$)</label>
+    <input id="modal-cost" type="number" step="0.01" placeholder="Ex: 38.80" min="0.01" onkeydown="if(event.key==='Enter') confirmarModal()">
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarModal()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+// Portfolio via localStorage
+const STORAGE_KEY = 'financeiro_carteira';
+const COLORS = ['gold','blue','green','orange','violet','teal'];
+const ICON_MAP = { 'gold':'droplets','blue':'factory','green':'bank','orange':'bank','violet':'spark','teal':'zap' };
+const NAMES = { 'gold':'Petrobras','blue':'Vale','green':'Itaú','orange':'Banco do Brasil','violet':'Outro','teal':'Energia' };
+
+function getPortfolio() {
+  let data = localStorage.getItem(STORAGE_KEY);
+  if (!data) {
+    data = [
+      { ticker:'PETR4', qty:120, cost:38.80 },
+      { ticker:'VALE3', qty:80, cost:50.60 },
+      { ticker:'ITUB4', qty:150, cost:34.00 },
+      { ticker:'BBAS3', qty:200, cost:26.90 },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return data;
+  }
+  return JSON.parse(data);
+}
+
+function savePortfolio(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function renderCard(ticker, qty, cost, colorIdx, q, totalVal) {
+  const color = COLORS[colorIdx % COLORS.length];
+  const iconName = ICON_MAP[color] || 'trendingUp';
+  const price = q ? q.price : 0;
+  const val = qty * price;
+  const costTotal = qty * cost;
+  const pl = val - costTotal;
+  const plPct = cost > 0 ? ((price - cost) / cost) * 100 : 0;
+  const pct = totalVal > 0 ? (val / totalVal) * 100 : 0;
+
+  return `<div class="card pos-card" data-ticker="${ticker}" onclick="window.location='/static/relatorio.html?${ticker}'">
+    <button class="delete-btn" onclick="event.stopPropagation();removerAtivo('${ticker}')" aria-label="Remover ${ticker}">${icon('x', { size: 12 })}</button>
+    <div class="card-top">
+      <div class="card-company">
+        <div class="icon-box icon-${color}">${icon(iconName, { size: 18 })}</div>
+        <div class="card-name"><h3>${ticker}</h3><div class="sub">${NAMES[color] || ticker} · ${qty} ações</div></div>
+      </div>
+      <span class="card-badge ${pl >= 0 ? 'up' : 'down'}">${pl >= 0 ? '▲' : '▼'} ${Math.abs(plPct).toFixed(1)}%</span>
+    </div>
+    <div class="card-mid">
+      <div class="card-value">${formatMoney(val)}</div>
+      <div class="card-qty">${pct.toFixed(0)}%</div>
+    </div>
+    <div class="pct-bar"><div style="width:${Math.max(pct,5)}%;"></div></div>
+    <div class="card-info-row">
+      <span>Custo <span class="val">${formatMoney(costTotal)}</span></span>
+      <span>Preço <span class="val">${formatMoney(price)}</span></span>
+      <span>Lucro <span class="val" style="color:${pl >= 0 ? 'var(--success)' : 'var(--danger)'}">${pl >= 0 ? '+' : '-'}${formatMoney(Math.abs(pl))}</span></span>
+    </div>
+  </div>`;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const portfolio = getPortfolio();
+  const grid = document.getElementById('positions-grid');
+  if (!portfolio || portfolio.length === 0) {
+    grid.innerHTML = `<div class="loading-state" style="width:100%;grid-column:1/-1;"><span data-icon="info" data-icon-size="16"></span><span>Carteira vazia. Clique em "+ Novo Ativo" para começar.</span></div>`;
+    hydrateIcons(grid);
+    document.getElementById('total-positions').textContent = '0';
+    return;
+  }
+
+  let totalVal = 0, totalCost = 0, totalShares = 0;
+  const quotes = {};
+
+  for (const item of portfolio) {
+    try {
+      const q = await apiGet(`/api/quote/${item.ticker}`);
+      quotes[item.ticker] = q;
+      totalVal += q.price * item.qty;
+    } catch(e) {
+      quotes[item.ticker] = null;
+    }
+    totalCost += item.qty * item.cost;
+    totalShares += item.qty;
+  }
+
+  grid.innerHTML = portfolio.map((item, i) => {
+    return renderCard(item.ticker, item.qty, item.cost, i, quotes[item.ticker], totalVal);
+  }).join('');
+  hydrateIcons(grid);
+
+  const totalPL = totalVal - totalCost;
+  const totalPct = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+  document.getElementById('total-value').textContent = formatMoney(totalVal);
+  const returnEl = document.getElementById('total-return');
+  returnEl.innerHTML = `${totalPL >= 0 ? '▲' : '▼'} ${Math.abs(totalPct).toFixed(1)}%`;
+  returnEl.className = `pct ${totalPL >= 0 ? 'up' : 'down'}`;
+  document.getElementById('total-profit').textContent = `${totalPL >= 0 ? '+' : '-'}${formatMoney(Math.abs(totalPL))}`;
+  document.getElementById('total-shares').textContent = totalShares;
+  const profitAbs = document.getElementById('total-profit-abs');
+  profitAbs.textContent = `${totalPL >= 0 ? '+' : '-'}${formatMoney(Math.abs(totalPL))}`;
+  profitAbs.style.color = totalPL >= 0 ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('total-positions').textContent = portfolio.length;
+
+  const allocBar = document.getElementById('allocation-bar');
+  const SECTOR_COLORS = ['#d4a017','#3b82f6','#10b981','#f97316','#8b5cf6','#14b8a6'];
+  allocBar.innerHTML = portfolio.map((item, i) => {
+    const pct = totalVal > 0 ? ((quotes[item.ticker]?.price || 0) * item.qty / totalVal) * 100 : 0;
+    return `<div style="width:${Math.max(pct, 5)}%;background:${SECTOR_COLORS[i % SECTOR_COLORS.length]};" data-ticker="${item.ticker}" title="${item.ticker}: ${pct.toFixed(1)}%"></div>`;
+  }).join('');
+
+  try {
+    const stats = await apiGet('/api/quote/PETR4/statistics');
+    if (stats.dividend_yield) document.getElementById('avg-dy').textContent = `${(stats.dividend_yield * 100).toFixed(1)}%`;
+  } catch(e) {}
+});
+
+// Modal
+function abrirModal() {
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('show');
+  document.getElementById('modal-ticker').value = '';
+  document.getElementById('modal-qty').value = '';
+  document.getElementById('modal-cost').value = '';
+  setTimeout(() => document.getElementById('modal-ticker').focus(), 100);
+}
+
+function fecharModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+function confirmarModal() {
+  const ticker = document.getElementById('modal-ticker').value.trim().toUpperCase();
+  const qtd = parseInt(document.getElementById('modal-qty').value);
+  const custo = parseFloat(document.getElementById('modal-cost').value.replace(',','.'));
+  if (!ticker || !qtd || qtd < 1 || !custo || custo <= 0) {
+    showAlert('Preencha todos os campos corretamente', 'Validação');
+    return;
+  }
+  fecharModal();
+  const portfolio = getPortfolio();
+  portfolio.push({ ticker, qty: qtd, cost: custo });
+  savePortfolio(portfolio);
+  showToast(`${ticker} adicionado à carteira`, 'success');
+  setTimeout(() => location.reload(), 600);
+}
+
+function removerAtivo(ticker) {
+  showConfirm(`Remover ${ticker} da carteira?`, 'Excluir', { danger: true }).then(ok => {
+    if (!ok) return;
+    let portfolio = getPortfolio();
+    portfolio = portfolio.filter(item => item.ticker !== ticker);
+    savePortfolio(portfolio);
+    showToast(`${ticker} removido da carteira`, 'success');
+    setTimeout(() => location.reload(), 600);
+  });
+}
+</script>
+</body>
+</html>

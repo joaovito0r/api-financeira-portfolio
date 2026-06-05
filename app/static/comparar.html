@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Comparar</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .search-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-row input {
+      flex: 1; min-width: 160px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color var(--t-fast) var(--ease);
+    }
+    .search-row input:focus { border-color: var(--brand); }
+
+    .comp-header {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: stretch;
+    }
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .comp-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .comp-card.a::after { background: linear-gradient(90deg, var(--success), #34d399); }
+    .comp-card.b::after { background: linear-gradient(90deg, #2563eb, var(--info)); }
+    .comp-card .sub {
+      font-size: 11px;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .comp-card .name { font-size: 15px; font-weight: 600; color: #fff; margin: 2px 0; }
+    .comp-card .big {
+      font-size: 26px; font-weight: 700; color: #fff;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .comp-card .chg { font-size: 14px; font-weight: 600; margin-top: 4px; font-family: var(--mono); }
+
+    .vs-badge {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sec);
+      align-self: center;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .m-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .m-card .label {
+      font-size: 10px;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .m-card .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .m-card .v { font-size: 16px; font-weight: 700; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .winner {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .win-a { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .win-b { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .draw  { background: var(--surface-2); color: var(--text-sec); }
+
+    @media (max-width: 768px) {
+      .metrics { grid-template-columns: 1fr; }
+      .comp-header { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item active" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header"><h1>Comparar Ativos</h1></div>
+
+  <div class="search-row">
+    <input id="tickerA" placeholder="Primeiro ativo (ex: PETR4)" value="PETR4" aria-label="Ativo A">
+    <input id="tickerB" placeholder="Segundo ativo (ex: VALE3)" value="VALE3" aria-label="Ativo B">
+    <button class="btn btn-primary" onclick="comparar()">
+      <span data-icon="compare" data-icon-size="14"></span> Comparar
+    </button>
+  </div>
+
+  <div id="result-area">
+    <div class="loading-state"><span data-icon="compare" data-icon-size="16"></span><span>Clique em "Comparar" para iniciar</span></div>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+async function comparar() {
+  const a = document.getElementById('tickerA').value.trim().toUpperCase();
+  const b = document.getElementById('tickerB').value.trim().toUpperCase();
+  if (!a || !b) { showAlert('Preencha os dois tickers', 'Atenção'); return; }
+
+  const area = document.getElementById('result-area');
+  area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
+
+  try {
+    const [qA, qB, sA, sB, fA, fB] = await Promise.all([
+      apiGet(`/api/quote/${a}`), apiGet(`/api/quote/${b}`),
+      apiGet(`/api/quote/${a}/statistics`).catch(() => ({})),
+      apiGet(`/api/quote/${b}/statistics`).catch(() => ({})),
+      apiGet(`/api/quote/${a}/indicators`).catch(() => ({})),
+      apiGet(`/api/quote/${b}/indicators`).catch(() => ({})),
+    ]);
+
+    const nameA = qA.shortName || a;
+    const nameB = qB.shortName || b;
+    const priceA = qA.price || 0;
+    const priceB = qB.price || 0;
+
+    function row(label, vA, vB, better) {
+      const fmt = (v) => v != null && v !== '-' ? String(v) : '-';
+      const cls = better === 'a' ? 'win-a' : better === 'b' ? 'win-b' : 'draw';
+      const txt = better === 'a' ? `${a} melhor` : better === 'b' ? `${b} melhor` : 'Empate';
+      return `<div class="m-card">
+        <div class="label">${escapeHtml(label)}</div>
+        <div class="row">
+          <span class="v" style="color:${better === 'a' ? 'var(--success)' : 'var(--text)'};">${fmt(vA)}</span>
+          <span class="v" style="color:${better === 'b' ? '#60a5fa' : 'var(--text)'};">${fmt(vB)}</span>
+        </div>
+        <div style="margin-top:6px;"><span class="winner ${cls}">${escapeHtml(txt)}</span></div>
+      </div>`;
+    }
+
+    const cmp = (vA, vB, higher) => {
+      if (vA == null && vB == null) return null;
+      if (vA == null) return 'b';
+      if (vB == null) return 'a';
+      return higher ? (vA > vB ? 'a' : 'b') : (vA < vB ? 'a' : 'b');
+    };
+    const n = (v) => v ?? '-';
+    const pct = (v) => v != null ? `${(v * 100).toFixed(1)}%` : '-';
+    const money = (v) => v != null ? `R$ ${v.toLocaleString('pt-BR')}` : '-';
+
+    area.innerHTML = `
+      <div class="comp-header">
+        <div class="comp-card a" style="text-align:left;">
+          <div class="sub">${icon('trendingUp', { size: 12 })} ${a}</div>
+          <div class="name">${escapeHtml(nameA)}</div>
+          <div class="big">${formatMoney(priceA)}</div>
+          <div class="chg ${qA.change_percent >= 0 ? 'up' : 'down'}">${qA.change_percent >= 0 ? '▲' : '▼'} ${Math.abs(qA.change_percent || 0).toFixed(2)}%</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="comp-card b" style="text-align:right;">
+          <div class="sub">${b} ${icon('trendingUp', { size: 12 })}</div>
+          <div class="name">${escapeHtml(nameB)}</div>
+          <div class="big">${formatMoney(priceB)}</div>
+          <div class="chg ${qB.change_percent >= 0 ? 'up' : 'down'}">${qB.change_percent >= 0 ? '▲' : '▼'} ${Math.abs(qB.change_percent || 0).toFixed(2)}%</div>
+        </div>
+      </div>
+      <div class="metrics">
+        ${row('P/L (Preço/Lucro)', n(sA.trailing_pe), n(sB.trailing_pe), cmp(sA.trailing_pe, sB.trailing_pe, false))}
+        ${row('P/VP', n(sA.price_to_book), n(sB.price_to_book), cmp(sA.price_to_book, sB.price_to_book, false))}
+        ${row('EV/EBITDA', n(sA.ev_to_ebitda), n(sB.ev_to_ebitda), cmp(sA.ev_to_ebitda, sB.ev_to_ebitda, false))}
+        ${row('Dividend Yield', pct(sA.dividend_yield), pct(sB.dividend_yield), cmp(sA.dividend_yield, sB.dividend_yield, true))}
+        ${row('ROE', pct(fA.roe), pct(fB.roe), cmp(fA.roe, fB.roe, true))}
+        ${row('Beta (risco)', n(sA.beta), n(sB.beta), cmp(sA.beta, sB.beta, false))}
+        ${row('VPA', money(sA.book_value), money(sB.book_value), cmp(sA.book_value, sB.book_value, true))}
+        ${row('LPA', money(sA.earnings_per_share), money(sB.earnings_per_share), cmp(sA.earnings_per_share, sB.earnings_per_share, true))}
+      </div>`;
+  } catch(e) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>Erro: ${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+// Enter para comparar
+document.getElementById('tickerA').addEventListener('keydown', e => { if (e.key === 'Enter') comparar(); });
+document.getElementById('tickerB').addEventListener('keydown', e => { if (e.key === 'Enter') comparar(); });
+
+document.addEventListener('DOMContentLoaded', comparar);
+</script>
+</body>
+</html>

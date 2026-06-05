@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Alertas</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .new-alert {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .new-alert .label {
+      font-size: 12px;
+      color: var(--text-sec);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .new-alert input,
+    .new-alert select {
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color var(--t-fast) var(--ease);
+    }
+    .new-alert input:focus,
+    .new-alert select:focus { border-color: var(--brand); }
+
+    .al-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: all var(--t-fast) var(--ease);
+      margin-bottom: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .al-card:hover { border-color: var(--brand); transform: translateY(-1px); }
+    .al-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      opacity: 0;
+      transition: opacity var(--t-base) var(--ease);
+    }
+    .al-card:hover::after { opacity: 1; }
+    .al-card.pending::after   { background: linear-gradient(90deg, var(--brand), var(--brand-hover)); }
+    .al-card.triggered::after { background: linear-gradient(90deg, var(--success), #34d399); }
+
+    .al-card .info { flex: 1; }
+    .al-card .info h3 {
+      font-size: 14px; font-weight: 600; color: #fff;
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .al-card .info h3 .ticker { color: var(--brand-hover); font-weight: 700; }
+    .al-card .info .sub { font-size: 11px; color: var(--text-sec); margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; }
+
+    .al-card .status { text-align: right; min-width: 100px; }
+    .al-card .status .tag {
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+      display: inline-block; margin-top: 4px;
+    }
+    .tag-pending   { background: var(--brand-soft); color: var(--brand-hover); }
+    .tag-triggered { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+
+    .progress { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; margin-top: 8px; max-width: 200px; }
+    .progress-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+      transition: width var(--t-slow) var(--ease);
+    }
+
+    .al-card .del {
+      background: none; border: none;
+      color: var(--text-sec);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      transition: all var(--t-fast) var(--ease);
+      display: inline-flex;
+      margin-left: 4px;
+    }
+    .al-card .del:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item active" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header">
+    <h1>Alertas de Preço</h1>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn btn-outline" id="btn-check" onclick="verificarTodos(this)">
+        <span data-icon="refresh" data-icon-size="14"></span> <span>Verificar Todos</span>
+      </button>
+      <span id="alert-count" style="font-size:12px;color:var(--text-sec);padding:8px;display:flex;align-items:center;font-family:var(--mono);">0</span>
+    </div>
+  </div>
+
+  <div class="new-alert">
+    <span class="label"><span data-icon="plus" data-icon-size="14"></span> Novo Alerta</span>
+    <input id="new-ticker" placeholder="Ticker" value="PETR4" style="width:90px;" aria-label="Ticker">
+    <select id="new-direction" aria-label="Direção">
+      <option value="above">acima</option>
+      <option value="below">abaixo</option>
+    </select>
+    <input id="new-target" placeholder="Preço alvo" value="45,00" style="width:110px;" aria-label="Preço alvo">
+    <button class="btn btn-primary" onclick="criarAlerta()">
+      <span data-icon="plus" data-icon-size="14"></span> Criar
+    </button>
+  </div>
+
+  <div id="alerts-list">
+    <div class="loading-state"><span class="spinner"></span><span>Carregando alertas…</span></div>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+let token = localStorage.getItem('token');
+
+async function carregarAlertas() {
+  const list = document.getElementById('alerts-list');
+  if (!token) {
+    list.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login para ver seus alertas</span></div>`;
+    hydrateIcons(list);
+    return;
+  }
+  list.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
+
+  try {
+    const resp = await fetch('/me/alerts', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!resp.ok) {
+      list.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login novamente</span></div>`;
+      hydrateIcons(list);
+      return;
+    }
+    const data = await resp.json();
+    document.getElementById('alert-count').textContent = `${data.total} ativo(s)`;
+
+    if (data.total === 0) {
+      list.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Nenhum alerta ainda. Crie um acima!</span></div>`;
+      hydrateIcons(list);
+      return;
+    }
+
+    list.innerHTML = '';
+    for (const a of data.alerts) {
+      const pct = a.triggered ? 100 : 50;
+      const cl = a.triggered ? 'triggered' : 'pending';
+      const tag = a.triggered ? 'tag-triggered' : 'tag-pending';
+      const tagTxt = a.triggered ? 'Disparado' : 'Pendente';
+      const dirTxt = a.direction === 'above' ? 'acima' : 'abaixo';
+      const card = document.createElement('div');
+      card.className = `al-card ${cl}`;
+      card.innerHTML = `
+        <div class="info">
+          <h3><span class="ticker">${escapeHtml(a.ticker)}</span> ${dirTxt} de R$ ${Number(a.target_price).toFixed(2)}</h3>
+          <div class="sub">${icon('info', { size: 12 })} Criado ${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
+          ${!a.triggered ? `<div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>
+        <div class="status">
+          <span class="tag ${tag}">${tagTxt}</span>
+          <button class="del" onclick="deletarAlerta('${a.id}')" aria-label="Excluir alerta">${icon('trash', { size: 14 })}</button>
+        </div>`;
+      list.appendChild(card);
+    }
+    hydrateIcons(list);
+  } catch(e) {
+    list.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(list);
+  }
+}
+
+async function criarAlerta() {
+  if (!token) { showAlert('Faça login primeiro', 'Atenção'); return; }
+  const ticker = document.getElementById('new-ticker').value.trim().toUpperCase();
+  const direction = document.getElementById('new-direction').value;
+  const target = parseFloat(document.getElementById('new-target').value.replace(',','.'));
+  if (!ticker || !target) { showAlert('Preencha ticker e preço', 'Atenção'); return; }
+
+  try {
+    await fetch(`/me/alerts?ticker=${ticker}&target_price=${target}&direction=${direction}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    document.getElementById('new-ticker').value = '';
+    document.getElementById('new-target').value = '';
+    showToast('Alerta criado', 'success');
+    carregarAlertas();
+  } catch(e) { showAlert('Erro ao criar alerta: ' + e.message, 'Erro'); }
+}
+
+async function deletarAlerta(id) {
+  const ok = await showConfirm('Excluir este alerta?', 'Excluir', { danger: true });
+  if (!ok) return;
+  try {
+    await fetch(`/me/alerts/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    showToast('Alerta excluído', 'success');
+    carregarAlertas();
+  } catch(e) { showAlert('Erro: ' + e.message, 'Erro'); }
+}
+
+async function verificarTodos(btn) {
+  if (!token) { showAlert('Faça login primeiro', 'Atenção'); return; }
+  const label = btn.querySelector('span:last-child');
+  const originalText = label.textContent;
+  label.textContent = 'Verificando…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/me/alerts/check-all', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      showToast(`${d.triggered || 0} alerta(s) disparado(s) de ${d.total || 0}`, 'success');
+    }
+    carregarAlertas();
+  } catch(e) { showAlert('Erro: ' + e.message, 'Erro'); }
+  label.textContent = originalText;
+  btn.disabled = false;
+}
+
+async function autoLogin() {
+  try {
+    const r = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@test.com', password: '12345678' })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      token = d.access_token;
+      localStorage.setItem('token', token);
+    }
+  } catch(e) {}
+  carregarAlertas();
+}
+
+document.addEventListener('DOMContentLoaded', autoLogin);
+</script>
+</body>
+</html>

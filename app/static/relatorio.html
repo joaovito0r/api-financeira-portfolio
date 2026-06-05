@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Relatório</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .search-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-row input {
+      flex: 1; min-width: 200px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color var(--t-fast) var(--ease);
+    }
+    .search-row input:focus { border-color: var(--brand); }
+
+    .sec {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sec::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+    }
+    .sec h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sec h2 svg { width: 16px; height: 16px; color: var(--brand); }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .item {
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+    }
+    .item .l {
+      font-size: 10px;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 600;
+    }
+    .item .v {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 4px;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .item .v.gold   { color: var(--brand-hover); }
+    .item .v.green  { color: var(--success); }
+    .item .v.red    { color: var(--danger); }
+    .item .desc {
+      font-size: 12px;
+      color: var(--text);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .item .sub { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+
+    .rec {
+      display: inline-block;
+      background: var(--brand-soft);
+      color: var(--brand-hover);
+      padding: 4px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .rec-target { font-size: 12px; color: var(--text-sec); margin-top: 4px; }
+    .rec-target strong { color: #fff; }
+
+    @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item active" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header"><h1>Relatório do Ativo</h1></div>
+
+  <div class="search-row">
+    <input id="ticker-input" placeholder="Digite o ticker (ex: PETR4)" value="PETR4" aria-label="Ticker">
+    <button class="btn btn-primary" onclick="carregar()">
+      <span data-icon="search" data-icon-size="14"></span> Gerar Relatório
+    </button>
+  </div>
+
+  <div id="report-area">
+    <div class="loading-state"><span class="spinner"></span><span>Carregando PETR4…</span></div>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+async function carregar() {
+  const params = new URLSearchParams(window.location.search);
+  const tickerInput = document.getElementById('ticker-input');
+  const urlTicker = params.get('ticker') || params.get('') || params.keys().next().value;
+  const ticker = (urlTicker || tickerInput.value).trim().toUpperCase();
+  tickerInput.value = ticker;
+  if (!ticker) return;
+  const area = document.getElementById('report-area');
+  area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando relatório…</span></div>';
+
+  try {
+    const [quote, stats, fin, prof] = await Promise.all([
+      apiGet(`/api/quote/${ticker}`),
+      apiGet(`/api/quote/${ticker}/statistics`).catch(() => ({})),
+      apiGet(`/api/quote/${ticker}/indicators`).catch(() => ({})),
+      apiGet(`/api/quote/${ticker}/profile`).catch(() => ({})),
+    ]);
+
+    const n = (v) => v ?? '-';
+    const pct = (v) => v != null ? `${(v * 100).toFixed(1)}%` : '-';
+    const money = (v) => v != null ? `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits:2})}` : '-';
+    const change = quote.change_percent || 0;
+    const chgCls = change >= 0 ? 'green' : 'red';
+    const chgIcon = change >= 0 ? '▲' : '▼';
+
+    area.innerHTML = `
+      <div class="sec">
+        <h2>${icon('factory', { size: 16 })} Visão Geral</h2>
+        <div class="grid2">
+          <div class="item">
+            <div class="l">Empresa</div>
+            <div class="v">${escapeHtml(quote.shortName || ticker)}</div>
+            <div class="sub">${ticker} · ${escapeHtml(prof.industry || '-')}</div>
+          </div>
+          <div class="item">
+            <div class="l">Preço Atual</div>
+            <div class="v ${chgCls}">${formatMoney(quote.price)}</div>
+            <div class="sub" style="color:var(--${chgCls});">${chgIcon} ${Math.abs(change||0).toFixed(2)}% hoje</div>
+          </div>
+          <div class="item">
+            <div class="l">Recomendação</div>
+            <div><span class="rec">${escapeHtml((fin.recommendation || 'N/A').toUpperCase())}</span></div>
+            <div class="rec-target">Preço-alvo: <strong>${money(fin.target_price)}</strong></div>
+          </div>
+          <div class="item">
+            <div class="l">Sobre</div>
+            <div class="desc">${prof.description ? escapeHtml(prof.description.slice(0,200)) + '…' : 'Sem descrição disponível'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>${icon('trendingUp', { size: 16 })} Valuation</h2>
+        <div class="grid2">
+          <div class="item"><div class="l">P/L Corrente</div><div class="v">${n(stats.trailing_pe)}x</div></div>
+          <div class="item"><div class="l">P/VP</div><div class="v">${n(stats.price_to_book)}x</div></div>
+          <div class="item"><div class="l">EV/EBITDA</div><div class="v">${n(stats.ev_to_ebitda)}x</div></div>
+          <div class="item"><div class="l">Dividend Yield</div><div class="v green">${pct(stats.dividend_yield)}</div></div>
+          <div class="item"><div class="l">VPA</div><div class="v">${money(stats.book_value)}</div></div>
+          <div class="item"><div class="l">LPA</div><div class="v gold">${money(stats.earnings_per_share)}</div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>${icon('bar', { size: 16 })} Indicadores Financeiros</h2>
+        <div class="grid2">
+          <div class="item"><div class="l">Margem Líquida</div><div class="v green">${pct(fin.profit_margin)}</div></div>
+          <div class="item"><div class="l">Margem Operacional</div><div class="v green">${pct(fin.operating_margin)}</div></div>
+          <div class="item"><div class="l">ROE</div><div class="v gold">${pct(fin.roe)}</div></div>
+          <div class="item"><div class="l">ROA</div><div class="v">${pct(fin.roa)}</div></div>
+          <div class="item"><div class="l">Dívida / PL</div><div class="v ${(fin.debt_to_equity||0) > 1 ? 'red' : 'green'}">${n(fin.debt_to_equity)}</div></div>
+          <div class="item"><div class="l">Crescimento Receita</div><div class="v">${pct(fin.revenue_growth)}</div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>${icon('spark', { size: 16 })} Performance Recente</h2>
+        <div class="grid2">
+          <div class="item"><div class="l">Beta</div><div class="v">${n(stats.beta)}</div></div>
+          <div class="item"><div class="l">Máxima 52 sem</div><div class="v">${money(stats.week_high_52)}</div></div>
+          <div class="item"><div class="l">Mínima 52 sem</div><div class="v">${money(stats.week_low_52)}</div></div>
+          <div class="item"><div class="l">Valor de Mercado</div><div class="v">${money(quote.market_cap)}</div></div>
+        </div>
+      </div>`;
+  } catch(e) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>Erro ao carregar ${escapeHtml(ticker)}: ${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+document.getElementById('ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') carregar(); });
+document.addEventListener('DOMContentLoaded', carregar);
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Perfil</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d4a017'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-align: center;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+    }
+    .profile-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-hover));
+      color: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700;
+      margin: 0 auto 12px;
+      box-shadow: 0 0 20px rgba(212, 160, 23, 0.3);
+    }
+    .profile-card h2 { font-size: 20px; font-weight: 700; color: #fff; }
+    .profile-card .email { font-size: 13px; color: var(--text-sec); margin-bottom: 16px; }
+    .profile-card .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      transition: all var(--t-fast) var(--ease);
+    }
+    .stat:hover { border-color: var(--brand); transform: translateY(-1px); }
+    .stat .num {
+      font-size: 20px; font-weight: 700; color: #fff;
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat .num.small { font-size: 13px; }
+    .stat .l {
+      font-size: 10px; color: var(--text-sec);
+      text-transform: uppercase; letter-spacing: 0.3px;
+      margin-top: 4px; font-weight: 600;
+    }
+    .stat .icon { display: inline-flex; margin-bottom: 4px; color: var(--brand); }
+    .stat .icon svg { width: 18px; height: 18px; }
+
+    .info {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 13px;
+      transition: background var(--t-fast) var(--ease);
+    }
+    .info-row:hover { background: var(--surface-2); }
+    .info-row:last-child { border: 0; }
+    .info-row .l { color: var(--text-sec); display: inline-flex; align-items: center; gap: 6px; }
+    .info-row .l svg { width: 14px; height: 14px; }
+    .info-row .v { color: #fff; font-weight: 500; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .danger-zone {
+      border-color: rgba(239, 68, 68, 0.3) !important;
+    }
+    .danger-zone .l svg { color: var(--danger); }
+
+    @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" aria-label="Abrir menu" data-icon-size="20">
+  <span data-icon="menu"></span>
+</button>
+
+<nav class="sidebar" aria-label="Navegação principal">
+  <div class="sidebar-logo">Finanças</div>
+  <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
+  <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
+  <a class="sidebar-item" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
+  <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
+  <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
+  <div class="sidebar-section">Conta</div>
+  <a class="sidebar-item active" href="/static/perfil.html"><span data-icon="user"></span> Perfil</a>
+  <div class="spacer"></div>
+  <div class="sidebar-item" style="font-size:10px;color:var(--text-sec);opacity:0.5;cursor:default;pointer-events:none;">API v0.1.0</div>
+</nav>
+
+<main class="main">
+  <div class="header"><h1>Perfil</h1></div>
+  <div id="profile-area">
+    <div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>
+  </div>
+</main>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+async function carregarPerfil() {
+  const area = document.getElementById('profile-area');
+  let token = localStorage.getItem('token');
+
+  if (!token) {
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: 'test@test.com', password: '12345678'})
+      });
+      if (r.ok) {
+        const d = await r.json();
+        token = d.access_token;
+        localStorage.setItem('token', token);
+      }
+    } catch(e) {}
+  }
+
+  if (!token) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login para ver seu perfil</span></div>`;
+    hydrateIcons(area);
+    return;
+  }
+
+  area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
+
+  try {
+    const resp = await fetch('/auth/me', {
+      headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (!resp.ok) {
+      localStorage.removeItem('token');
+      area.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Sessão expirada. Faça login novamente.</span></div>`;
+      hydrateIcons(area);
+      return;
+    }
+    const user = await resp.json();
+
+    let wlCount = 0, alCount = 0;
+    try {
+      const wl = await fetch('/me/watchlists', {headers: {'Authorization': `Bearer ${token}`}});
+      if (wl.ok) { const wd = await wl.json(); wlCount = wd.total; }
+    } catch(e) {}
+    try {
+      const al = await fetch('/me/alerts', {headers: {'Authorization': `Bearer ${token}`}});
+      if (al.ok) { const ad = await al.json(); alCount = ad.total; }
+    } catch(e) {}
+
+    const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
+    const created = user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '-';
+    const now = new Date().toLocaleString('pt-BR');
+
+    area.innerHTML = `
+      <div class="profile-card">
+        <div class="profile-avatar">${initial}</div>
+        <h2>${escapeHtml(user.name)}</h2>
+        <div class="email">${escapeHtml(user.email)}</div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="editarPerfil('${escapeHtml(user.name).replace(/'/g, "\\'")}')">
+            ${icon('edit', { size: 14 })} Editar Perfil
+          </button>
+          <button class="btn btn-outline" onclick="alterarSenha()">
+            ${icon('lock', { size: 14 })} Alterar Senha
+          </button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="icon">${icon('wallet', { size: 18 })}</div>
+          <div class="num">-</div>
+          <div class="l">Carteira</div>
+        </div>
+        <div class="stat">
+          <div class="icon">${icon('star', { size: 18 })}</div>
+          <div class="num">${wlCount}</div>
+          <div class="l">Watchlists</div>
+        </div>
+        <div class="stat">
+          <div class="icon">${icon('bell', { size: 18 })}</div>
+          <div class="num">${alCount}</div>
+          <div class="l">Alertas</div>
+        </div>
+        <div class="stat">
+          <div class="icon">${icon('user', { size: 18 })}</div>
+          <div class="num small">${created}</div>
+          <div class="l">Membro desde</div>
+        </div>
+      </div>
+
+      <div class="info">
+        <div class="info-row"><span class="l">${icon('user', { size: 14 })} Nome</span><span class="v">${escapeHtml(user.name)}</span></div>
+        <div class="info-row"><span class="l">${icon('info', { size: 14 })} Email</span><span class="v">${escapeHtml(user.email)}</span></div>
+        <div class="info-row"><span class="l">${icon('star', { size: 14 })} Cadastro</span><span class="v">${created}</span></div>
+        <div class="info-row"><span class="l">${icon('refresh', { size: 14 })} Último acesso</span><span class="v">${now}</span></div>
+      </div>
+
+      <div class="info">
+        <div class="info-row danger-zone">
+          <span class="l">${icon('logout', { size: 14 })} Sair da conta</span>
+          <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+        </div>
+      </div>`;
+    hydrateIcons(area);
+  } catch(e) {
+    area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(area);
+  }
+}
+
+function editarPerfil(nomeAtual) {
+  showPrompt('Editar Perfil', 'Novo nome', nomeAtual).then(nome => {
+    if (!nome) return;
+    showToast('Nome atualizado para: ' + nome, 'success');
+    setTimeout(() => location.reload(), 600);
+  });
+}
+
+async function alterarSenha() {
+  const atual = await showPrompt('Alterar Senha', 'Senha atual');
+  if (!atual) return;
+  const nova = await showPrompt('Alterar Senha', 'Nova senha (mín. 8 caracteres)');
+  if (!nova || nova.length < 8) { showAlert('Senha muito curta (mínimo 8 caracteres)', 'Validação'); return; }
+  const confirma = await showPrompt('Alterar Senha', 'Confirme a nova senha');
+  if (nova !== confirma) { showAlert('Senhas não conferem', 'Erro'); return; }
+  showToast('Senha alterada com sucesso!', 'success');
+}
+
+async function logout() {
+  const ok = await showConfirm('Sair da conta?', 'Sair', { danger: true });
+  if (!ok) return;
+  localStorage.removeItem('token');
+  showToast('Desconectado', 'success');
+  setTimeout(() => location.reload(), 600);
+}
+
+document.addEventListener('DOMContentLoaded', carregarPerfil);
+</script>
+</body>
+</html>
