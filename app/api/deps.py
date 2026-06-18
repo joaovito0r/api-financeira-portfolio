@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import settings
 from app.core.exceptions import RateLimitError
@@ -52,10 +53,19 @@ def get_auth_service() -> AuthService:
     return AuthService()
 
 
+# `auto_error=False`: preferimos o 401 customizado abaixo ao 403 default do
+# FastAPI quando o header falta. Declarar como `HTTPBearer` (em vez de ler o
+# header "Authorization" manualmente) é o que faz o FastAPI registrar o
+# security scheme no OpenAPI — por isso o Swagger mostra o cadeado e o botão
+# "Authorize" em toda rota que depende de `get_current_user`.
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    description="Token JWT obtido em /auth/register ou /auth/login",
+)
+
+
 async def get_current_user(
-    authorization: str | None = Header(
-        None, description="Token JWT no formato 'Bearer <token>'"
-    ),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> dict[str, Any]:
     """Extrai e valida o usuário atual a partir do token JWT.
@@ -63,7 +73,7 @@ async def get_current_user(
     Pode ser injetada em qualquer rota protegida com `Depends(get_current_user)`.
 
     Args:
-        authorization: Header Authorization.
+        credentials: Credenciais Bearer extraídas do header Authorization.
 
     Returns:
         Dict com dados do usuário (id, name, email).
@@ -71,23 +81,16 @@ async def get_current_user(
     Raises:
         HTTPException 401: Se o token for inválido ou ausente.
     """
-    if not authorization:
+    if credentials is None:
         raise HTTPException(
             status_code=401,
             detail=(
                 "Token de acesso não fornecido. Envie no formato 'Bearer <seu_token>'"
             ),
         )
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Token ausente ou formato inválido. Use 'Bearer <token>'",
-        )
-
-    token = authorization.removeprefix("Bearer ")
 
     try:
-        return await auth_service.get_current_user(token)
+        return await auth_service.get_current_user(credentials.credentials)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
