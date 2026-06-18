@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 
+from app.api.deps import rate_limit_data
 from app.schemas.asset import AssetListResponse
 from app.services.asset_service import AssetService
 
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/api", tags=["Ativos"])
     response_model=AssetListResponse,
     summary="Listar ativos disponíveis",
     description="Lista todos os ativos disponíveis com opção de filtro.",
+    dependencies=[Depends(rate_limit_data)],
 )
 async def list_assets(
     search: str | None = Query(None, description="Busca por nome/ticker"),
@@ -39,6 +41,7 @@ async def list_assets(
     "/available",
     summary="Lista simplificada de ativos",
     description="Versão leve da lista de ativos (apenas ticker + nome).",
+    dependencies=[Depends(rate_limit_data)],
 )
 async def available(
     service: AssetService = Depends(get_asset_service),

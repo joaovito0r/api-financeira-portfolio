@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps import get_current_user
+from app.api.deps import rate_limit_user
 from app.core.validation import normalize_ticker
 from app.services.watchlist_service import WatchlistService
 
@@ -21,7 +21,7 @@ service = WatchlistService()
 
 @router.get("", summary="Listar watchlists")
 async def list_watchlists(
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Lista todas as watchlists do usuário logado."""
     watchlists = await service.list_watchlists(current_user["id"])
@@ -33,7 +33,7 @@ async def create_watchlist(
     name: str = Query(
         ..., min_length=1, max_length=100, description="Nome da watchlist"
     ),
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Cria uma nova watchlist."""
     watchlist = await service.create_watchlist(current_user["id"], name)
@@ -44,7 +44,7 @@ async def create_watchlist(
 async def rename_watchlist(
     watchlist_id: str,
     name: str = Query(..., min_length=1, max_length=100, description="Novo nome"),
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Renomeia uma watchlist existente."""
     result = await service.rename_watchlist(current_user["id"], watchlist_id, name)
@@ -56,7 +56,7 @@ async def rename_watchlist(
 @router.delete("/{watchlist_id}", summary="Remover watchlist")
 async def delete_watchlist(
     watchlist_id: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Remove uma watchlist e todos os seus itens."""
     deleted = await service.delete_watchlist(current_user["id"], watchlist_id)
@@ -68,7 +68,7 @@ async def delete_watchlist(
 @router.get("/{watchlist_id}/items", summary="Listar tickers da watchlist")
 async def list_items(
     watchlist_id: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Lista os tickers salvos em uma watchlist."""
     items = await service.list_items(current_user["id"], watchlist_id)
@@ -82,7 +82,7 @@ async def add_item(
     watchlist_id: str,
     ticker: str = Query(..., description="Ticker do ativo (ex: PETR4)"),
     notes: str | None = Query(None, description="Anotações opcionais"),
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Adiciona um ativo à watchlist."""
     try:
@@ -99,7 +99,7 @@ async def add_item(
 async def remove_item(
     watchlist_id: str,
     ticker: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Remove um ativo da watchlist."""
     removed = await service.remove_item(current_user["id"], watchlist_id, ticker)

@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from app.api.deps import get_current_user
+from app.api.deps import rate_limit_user
 from app.core.validation import normalize_ticker
 from app.services.alert_service import AlertService
 
@@ -25,7 +25,7 @@ def get_alert_service(request: Request) -> AlertService:
 @router.get("", summary="Listar alertas")
 async def list_alerts(
     request: Request,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Lista todos os alertas de preço do usuário."""
     service = get_alert_service(request)
@@ -45,7 +45,7 @@ async def create_alert(
             "ou 'below' (quando cair abaixo)"
         ),
     ),
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Cria um alerta de preço para um ativo."""
     try:
@@ -74,7 +74,7 @@ async def create_alert(
 async def delete_alert(
     alert_id: str,
     request: Request,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Remove um alerta de preço."""
     service = get_alert_service(request)
@@ -88,7 +88,7 @@ async def delete_alert(
 async def check_alert(
     alert_id: str,
     request: Request,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Verifica se um alerta específico foi disparado."""
     service = get_alert_service(request)
@@ -101,7 +101,7 @@ async def check_alert(
 @router.get("/check-all", summary="Verificar todos os alertas")
 async def check_all_alerts(
     request: Request,
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Verifica todos os alertas pendentes do usuário."""
     service = get_alert_service(request)

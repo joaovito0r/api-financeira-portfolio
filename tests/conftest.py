@@ -10,6 +10,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from app.config import settings
 from app.main import app
 from app.repositories.local.models import init_db
 
@@ -18,6 +19,10 @@ from app.repositories.local.models import init_db
 async def setup_app() -> AsyncGenerator[None, None]:
     """Inicializa banco e sobrescreve cliente brapi com mock para testes."""
     await init_db()
+    # Desliga rate limiting por padrão: evita que a suíte (várias chamadas
+    # seguidas às rotas de watchlist/alert) estoure os baldes globais.
+    # Os testes específicos de rate limit religam via monkeypatch.
+    settings.rate_limit_enabled = False
     from unittest.mock import AsyncMock
 
     mock = AsyncMock()

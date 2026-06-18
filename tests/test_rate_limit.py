@@ -55,6 +55,29 @@ def test_rate_limit_error_carrega_retry_e_limit() -> None:
 
 
 @pytest.mark.asyncio
+async def test_login_excede_limite_publico_retorna_429(monkeypatch) -> None:
+    # Zera o estado global do limiter entre execuções
+    from app.core import rate_limit as rl
+
+    rl.limiter._buckets.clear()
+    monkeypatch.setattr(rl.settings, "rate_limit_enabled", True, raising=False)
+    monkeypatch.setattr(rl.settings, "rate_limit_public_per_min", 2, raising=False)
+
+    from app.main import app
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        # Credenciais inválidas de propósito: queremos só exercitar o limite.
+        codes = []
+        for _ in range(4):
+            r = await c.post(
+                "/auth/login", json={"email": "x@x.com", "password": "errada123"}
+            )
+            codes.append(r.status_code)
+    assert 429 in codes  # após 2 tentativas, estoura
+
+
+@pytest.mark.asyncio
 async def test_handler_429_tem_retry_after_header() -> None:
     from fastapi import FastAPI
 

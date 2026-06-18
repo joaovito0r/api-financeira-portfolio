@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from app.api.deps import rate_limit_expensive
 from app.core.validation import normalize_ticker
 
 router = APIRouter(tags=["Comparação"])
@@ -22,6 +23,7 @@ router = APIRouter(tags=["Comparação"])
         "Compara dois ou mais ativos lado a lado com métricas "
         "como P/L, P/VP, DY, ROE, EV/EBITDA, etc."
     ),
+    dependencies=[Depends(rate_limit_expensive)],
 )
 async def compare(
     request: Request,

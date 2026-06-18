@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import get_auth_service, get_current_user
+from app.api.deps import get_auth_service, rate_limit_login, rate_limit_user
 from app.schemas.auth import TokenResponse, UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
 
@@ -22,6 +22,7 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
     response_model=TokenResponse,
     summary="Criar conta",
     description="Registra um novo usuário e retorna token JWT.",
+    dependencies=[Depends(rate_limit_login)],
 )
 async def register(
     body: UserCreate,
@@ -43,6 +44,7 @@ async def register(
     response_model=TokenResponse,
     summary="Fazer login",
     description="Autentica com email e senha e retorna token JWT.",
+    dependencies=[Depends(rate_limit_login)],
 )
 async def login(
     body: UserLogin,
@@ -62,7 +64,7 @@ async def login(
     description="Retorna os dados do usuário logado.",
 )
 async def get_me(
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(rate_limit_user),
 ) -> dict[str, Any]:
     """Dados do usuário autenticado."""
     return current_user

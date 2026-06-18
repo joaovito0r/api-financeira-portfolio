@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import time
 
+from app.config import settings  # noqa: F401  (reexport p/ testes/monkeypatch)
+
 
 class TokenBucket:
     """Balde de tokens com reposição contínua."""

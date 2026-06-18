@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import valid_ticker
+from app.api.deps import rate_limit_data, valid_ticker
 from app.repositories.local.dividend_repo import LocalDividendRepository
 from app.schemas.dividend import DividendListResponse
 from app.services.dividend_service import DividendService
@@ -29,6 +29,7 @@ router = APIRouter(prefix="/api", tags=["Dividendos"])
     response_model=DividendListResponse,
     summary="Dividendos de um ativo",
     description="Histórico de dividendos e proventos de um ativo.",
+    dependencies=[Depends(rate_limit_data)],
 )
 async def get_dividends(
     ticker: str = Depends(valid_ticker),
