@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     rate_limit_data_per_min: int = 60
     rate_limit_data_burst: int = 100
     rate_limit_expensive_per_min: int = 10
+    rate_limit_max_buckets: int = 10000  # teto de chaves vivas no RateLimiter
 
     # Throttle de saída à brapi (protege a quota do plano free)
     brapi_max_concurrency: int = 4

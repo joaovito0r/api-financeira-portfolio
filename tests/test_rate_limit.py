@@ -77,6 +77,42 @@ async def test_login_excede_limite_publico_retorna_429(monkeypatch) -> None:
     assert 429 in codes  # após 2 tentativas, estoura
 
 
+def test_limiter_aplica_teto_no_numero_de_baldes(monkeypatch) -> None:
+    """Atacante rotacionando X-Forwarded-For não deve crescer o dict sem limite.
+
+    Cada IP descartável faz só 1 request e nunca volta. Com refill rápido,
+    pelo tempo em que o limiter atinge o teto e tenta inserir o próximo
+    balde, os baldes anteriores já reabasteceram (tokens >= capacity) e são
+    elegíveis à varredura — simulando o caso comum do ataque.
+    """
+    clock = {"t": 0.0}
+    monkeypatch.setattr("app.core.rate_limit.time.monotonic", lambda: clock["t"])
+    limiter = RateLimiter(max_buckets=10)
+    for i in range(1000):
+        clock["t"] += 1.0  # tempo passa entre requests (refill_per_sec=1.0)
+        limiter.check(f"auth:ip-{i}", capacity=1, refill_per_sec=1.0)
+        assert len(limiter._buckets) <= 10
+
+
+def test_limiter_nao_descarta_baldes_ativamente_limitados(monkeypatch) -> None:
+    """Baldes esgotados (em uso real de limitação) não somem na eviction."""
+    monkeypatch.setattr("app.core.rate_limit.time.monotonic", lambda: 0.0)
+    limiter = RateLimiter(max_buckets=3)
+    # Esgota completamente o balde de "A" (fica com tokens=0, não está cheio).
+    limiter.check("A", capacity=1, refill_per_sec=0.0)
+    assert "A" in limiter._buckets
+
+    # Preenche o limiter com baldes novos (cheios) até estourar o teto,
+    # forçando a varredura de eviction.
+    limiter.check("B", capacity=1, refill_per_sec=0.0)
+    limiter.check("C", capacity=1, refill_per_sec=0.0)
+    limiter.check("D", capacity=1, refill_per_sec=0.0)
+
+    # "A" continua presente: estava esgotado (tokens=0 < capacity), não é
+    # elegível para a varredura de baldes cheios.
+    assert "A" in limiter._buckets
+
+
 @pytest.mark.asyncio
 async def test_handler_429_tem_retry_after_header() -> None:
     from fastapi import FastAPI
