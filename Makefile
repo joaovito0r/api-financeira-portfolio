@@ -1,4 +1,4 @@
-.PHONY: dev test lint format clean install
+.PHONY: dev test lint format clean install migrate migrate-create migrate-down
 
 # Desenvolvimento
 dev:
@@ -7,6 +7,16 @@ dev:
 # Testes
 test:
 	pytest
+
+# Migrations (Alembic) — também rodam automaticamente no startup da app
+migrate:
+	alembic upgrade head
+
+migrate-create:
+	alembic revision --autogenerate -m "$(m)"
+
+migrate-down:
+	alembic downgrade -1
 
 # Qualidade
 lint:

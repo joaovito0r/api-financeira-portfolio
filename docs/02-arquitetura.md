@@ -175,7 +175,8 @@ api-financeira-portfolio/
 │   └── 02-arquitetura.md         ✓
 │
 ├── alembic/
-│   └── ...                       # Migrations (quando necessário)
+│   ├── versions/                 # Migrations versionadas (autogeradas)
+│   └── env.py                    # Aplicadas automaticamente no lifespan
 │
 ├── .env.example
 ├── pyproject.toml

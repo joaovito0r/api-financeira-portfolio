@@ -31,17 +31,17 @@ from app.api.routes import (
 )
 from app.config import settings
 from app.core.exceptions import RateLimitError
+from app.core.migrations import run_migrations
 from app.core.warm_cache import warm_cache_loop
 from app.repositories.brapi.client import BrapiClient
-from app.repositories.local.models import init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Gerencia o ciclo de vida da aplicação."""
-    # Startup: valida config de produção, inicia banco e cliente brapi
+    # Startup: valida config de produção, aplica migrations e inicia cliente brapi
     settings.check_production_ready()
-    await init_db()
+    await run_migrations()
     app.state.brapi_client = BrapiClient()
 
     warm_task: asyncio.Task[None] | None = None
@@ -135,9 +135,7 @@ async def validation_error_handler(
 
 
 @app.exception_handler(RateLimitError)
-async def rate_limit_handler(
-    _request: Request, exc: RateLimitError
-) -> JSONResponse:
+async def rate_limit_handler(_request: Request, exc: RateLimitError) -> JSONResponse:
     """Responde 429 com Retry-After quando o token bucket é excedido."""
     is_inf = exc.retry_after == float("inf")
     retry = 60 if is_inf else max(1, math.ceil(exc.retry_after))

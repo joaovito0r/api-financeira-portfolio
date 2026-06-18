@@ -41,6 +41,9 @@ include = ["app*"]
 target-version = "py312"
 line-length = 88
 indent-width = 4
+# Scripts de migration são autogerados pelo Alembic e regenerados a cada
+# revisão; não vale a pena manter o estilo do projeto neles a mão.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG", "PT"]
@@ -58,6 +61,7 @@ strict = true
 ignore_missing_imports = true
 disallow_untyped_defs = true
 disallow_any_unimported = false
+exclude = ["^alembic/versions/"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
