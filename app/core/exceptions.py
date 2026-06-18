@@ -21,4 +21,9 @@ class ExternalAPIError(DomainError):
 
 
 class RateLimitError(DomainError):
-    """Limite de requisições excedido."""
+    """Limite de requisições excedido (token bucket)."""
+
+    def __init__(self, retry_after: float, limit: int) -> None:
+        self.retry_after = retry_after
+        self.limit = limit
+        super().__init__("Limite de requisições excedido")

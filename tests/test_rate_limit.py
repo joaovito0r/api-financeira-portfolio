@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.core.exceptions import RateLimitError
 from app.core.rate_limit import RateLimiter, TokenBucket
 
 
@@ -42,3 +46,31 @@ def test_limiter_isola_chaves(monkeypatch) -> None:
     assert allowed_a is True
     assert allowed_a2 is False  # A esgotou
     assert allowed_b is True  # B independente
+
+
+def test_rate_limit_error_carrega_retry_e_limit() -> None:
+    err = RateLimitError(retry_after=4.2, limit=60)
+    assert err.retry_after == 4.2
+    assert err.limit == 60
+
+
+@pytest.mark.asyncio
+async def test_handler_429_tem_retry_after_header() -> None:
+    from fastapi import FastAPI
+
+    from app.main import rate_limit_handler  # handler exportado
+
+    app = FastAPI()
+
+    @app.get("/boom")
+    async def boom() -> dict[str, str]:
+        raise RateLimitError(retry_after=3.0, limit=60)
+
+    app.add_exception_handler(RateLimitError, rate_limit_handler)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/boom")
+    assert resp.status_code == 429
+    assert resp.headers["Retry-After"] == "3"
+    assert resp.headers["X-RateLimit-Limit"] == "60"

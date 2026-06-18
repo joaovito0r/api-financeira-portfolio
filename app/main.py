@@ -6,6 +6,7 @@ Inicializa o app, configura middlewares e registra as rotas.
 
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -27,6 +28,7 @@ from app.api.routes import (
     watchlists,
 )
 from app.config import settings
+from app.core.exceptions import RateLimitError
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.models import init_db
 
@@ -115,6 +117,25 @@ async def validation_error_handler(
     return JSONResponse(
         status_code=422,
         content={"detail": erros},
+    )
+
+
+@app.exception_handler(RateLimitError)
+async def rate_limit_handler(
+    _request: Request, exc: RateLimitError
+) -> JSONResponse:
+    """Responde 429 com Retry-After quando o token bucket é excedido."""
+    is_inf = exc.retry_after == float("inf")
+    retry = 60 if is_inf else max(1, math.ceil(exc.retry_after))
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": "Limite de requisições excedido. Tente novamente em instantes."
+        },
+        headers={
+            "Retry-After": str(retry),
+            "X-RateLimit-Limit": str(exc.limit),
+        },
     )
 
 

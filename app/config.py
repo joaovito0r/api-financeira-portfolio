@@ -36,6 +36,15 @@ class Settings(BaseSettings):
     # Cache
     quote_cache_ttl: int = 900  # 15 minutos
 
+    # Rate limiting (token bucket em memória)
+    rate_limit_enabled: bool = True
+    rate_limit_auth_per_min: int = 60
+    rate_limit_auth_burst: int = 100
+    rate_limit_public_per_min: int = 10
+    rate_limit_data_per_min: int = 60
+    rate_limit_data_burst: int = 100
+    rate_limit_expensive_per_min: int = 10
+
     # Segurança
     secret_key: str = ""
 
