@@ -6,24 +6,37 @@ Inicializa o app, configura middlewares e registra as rotas.
 
 from __future__ import annotations
 
+import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Union
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import alerts, assets, auth, compare, dividends, fundamental, quotes, reports, watchlists
+from app.api.routes import (
+    alerts,
+    assets,
+    auth,
+    compare,
+    dividends,
+    fundamental,
+    quotes,
+    reports,
+    watchlists,
+)
+from app.config import settings
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.models import init_db
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Gerencia o ciclo de vida da aplicação."""
-    # Startup: inicia banco e cliente brapi
-    init_db()
+    # Startup: valida config de produção, inicia banco e cliente brapi
+    settings.check_production_ready()
+    await init_db()
     app.state.brapi_client = BrapiClient()
     yield
     # Shutdown: fecha conexões
@@ -53,20 +66,41 @@ app.include_router(alerts.router)
 
 # ── Handlers de Erro ──────────────────────────────
 
+
 @app.exception_handler(RequestValidationError)
-async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_error_handler(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Traduz mensagens de validação do Pydantic para português."""
     erros = []
     for erro in exc.errors():
-        campo = " → ".join(str(loc) for loc in erro.get("loc", []) if loc not in ("body", "query", "header"))
+        # Extrai o nome do campo ignorando estruturas internas (body, query, header)
+        loc = [
+            str(loc)
+            for loc in erro.get("loc", [])
+            if loc not in ("body", "query", "header")
+        ]
+        # Converte índices numéricos para "[posição N]"
+        campo_parts: list[str] = []
+        for item in loc:
+            try:
+                int(item)
+                campo_parts.append(f"[posição {item}]")
+            except ValueError:
+                campo_parts.append(item)
+        campo = " → ".join(campo_parts) if campo_parts else "geral"
+
         msg = erro.get("msg", "")
         tipo = erro.get("type", "")
 
         # Tradução das mensagens comuns
+        ctx = erro.get("ctx", {})
         if "string_too_short" in tipo:
-            traduzida = f"{campo}: valor muito curto (mínimo {erro['ctx']['min_length']} caracteres)"
+            minimo = ctx.get("min_length", "?")
+            traduzida = f"{campo}: valor muito curto (mínimo {minimo} caracteres)"
         elif "string_too_long" in tipo:
-            traduzida = f"{campo}: valor muito longo (máximo {erro['ctx']['max_length']} caracteres)"
+            maximo = ctx.get("max_length", "?")
+            traduzida = f"{campo}: valor muito longo (máximo {maximo} caracteres)"
         elif "missing" in tipo:
             traduzida = f"{campo}: campo obrigatório"
         elif "value_error" in tipo or "literal_error" in tipo:
@@ -87,11 +121,9 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
-@app.get("/")
-async def root():
+@app.get("/", response_model=None)
+async def root() -> FileResponse | dict[str, str]:
     """Redireciona para o dashboard."""
-    from fastapi.responses import FileResponse
-    import os
     path = os.path.join(os.path.dirname(__file__), "static", "dashboard.html")
     if os.path.exists(path):
         return FileResponse(path)
@@ -99,6 +131,6 @@ async def root():
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     """Health check da aplicação."""
     return {"status": "ok", "version": "0.1.0"}

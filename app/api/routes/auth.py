@@ -6,9 +6,11 @@ Endpoints públicos para registro, login e consulta de perfil.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header
+from typing import Any
 
-from app.api.deps import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.api.deps import get_auth_service, get_current_user
 from app.schemas.auth import TokenResponse, UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
 
@@ -21,19 +23,19 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
     summary="Criar conta",
     description="Registra um novo usuário e retorna token JWT.",
 )
-async def register(body: UserCreate) -> dict:
+async def register(
+    body: UserCreate,
+    service: AuthService = Depends(get_auth_service),
+) -> dict[str, Any]:
     """Registra um novo usuário.
 
     A senha é hasheada com Argon2 antes de armazenar.
     Retorna um token JWT válido por 7 dias.
     """
-    service = AuthService()
     try:
         return await service.register(body.name, body.email, body.password)
     except ValueError as e:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post(
@@ -42,15 +44,15 @@ async def register(body: UserCreate) -> dict:
     summary="Fazer login",
     description="Autentica com email e senha e retorna token JWT.",
 )
-async def login(body: UserLogin) -> dict:
+async def login(
+    body: UserLogin,
+    service: AuthService = Depends(get_auth_service),
+) -> dict[str, Any]:
     """Autentica um usuário existente."""
-    service = AuthService()
     try:
         return await service.login(body.email, body.password)
     except ValueError as e:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
 
 @router.get(
@@ -59,6 +61,8 @@ async def login(body: UserLogin) -> dict:
     summary="Meus dados",
     description="Retorna os dados do usuário logado.",
 )
-async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
+async def get_me(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
     """Dados do usuário autenticado."""
     return current_user
