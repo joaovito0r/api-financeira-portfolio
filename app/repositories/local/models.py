@@ -96,6 +96,19 @@ class DividendModel(Base):
     reference_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
 
 
+class CacheEntryModel(Base):
+    """Cache genérico chave→JSON para dados lentos (fundamentos, listas)."""
+
+    __tablename__ = "cache_entries"
+
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    payload: Mapped[str] = mapped_column(Text)
+    policy: Mapped[str] = mapped_column(String(50), default="")
+    cached_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
+
+
 # ── Usuários ──────────────────────────────────────────
 
 

@@ -38,3 +38,4 @@ PROFILE_CACHE = CachePolicy(ttl=86400)  # 24h
 BALANCE_SHEET_CACHE = CachePolicy(ttl=604800)  # 7 dias
 INDICATOR_CACHE = CachePolicy(ttl=3600)  # 1h
 STATISTIC_CACHE = CachePolicy(ttl=3600)  # 1h
+ASSET_LIST_CACHE = CachePolicy(ttl=86400)  # 24h — lista de ativos muda raro
