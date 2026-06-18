@@ -10,6 +10,7 @@ balanceSheetHistory e incomeStatementHistory são listas, não dicts.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from app.repositories.brapi.client import BrapiClient
 
@@ -31,7 +32,7 @@ class FundamentalService:
             return value[:10]
         return None
 
-    async def get_profile(self, ticker: str) -> dict:
+    async def get_profile(self, ticker: str) -> dict[str, Any]:
         """Perfil da empresa."""
         raw = await self._brapi.quote(ticker, modules="summaryProfile")
         profile = raw.get("results", [{}])[0].get("summaryProfile", {})
@@ -48,7 +49,7 @@ class FundamentalService:
             "employees": profile.get("fullTimeEmployees"),
         }
 
-    async def get_balance_sheet(self, ticker: str) -> list[dict]:
+    async def get_balance_sheet(self, ticker: str) -> list[dict[str, Any]]:
         """Balanço Patrimonial."""
         raw = await self._brapi.quote(ticker, modules="balanceSheetHistory")
         sheets = raw.get("results", [{}])[0].get("balanceSheetHistory", [])
@@ -67,7 +68,7 @@ class FundamentalService:
             for bs in sheets
         ]
 
-    async def get_income_statement(self, ticker: str) -> list[dict]:
+    async def get_income_statement(self, ticker: str) -> list[dict[str, Any]]:
         """DRE."""
         raw = await self._brapi.quote(ticker, modules="incomeStatementHistory")
         statements = raw.get("results", [{}])[0].get("incomeStatementHistory", [])
@@ -86,7 +87,7 @@ class FundamentalService:
             for st in statements
         ]
 
-    async def get_indicators(self, ticker: str) -> dict:
+    async def get_indicators(self, ticker: str) -> dict[str, Any]:
         """Indicadores financeiros."""
         raw = await self._brapi.quote(ticker, modules="financialData")
         data = raw.get("results", [{}])[0].get("financialData", {})
@@ -105,7 +106,7 @@ class FundamentalService:
             "debt_to_equity": data.get("debtToEquity"),
         }
 
-    async def get_statistics(self, ticker: str) -> dict:
+    async def get_statistics(self, ticker: str) -> dict[str, Any]:
         """Estatísticas-chave."""
         raw = await self._brapi.quote(ticker, modules="defaultKeyStatistics")
         data = raw.get("results", [{}])[0].get("defaultKeyStatistics", {})

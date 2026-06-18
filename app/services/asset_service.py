@@ -6,6 +6,8 @@ Consulta a brapi.dev e retorna ativos disponíveis com filtros.
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.repositories.brapi.client import BrapiClient
 
 
@@ -17,7 +19,7 @@ class AssetService:
 
     async def list_assets(
         self, search: str | None = None, sector: str | None = None
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Lista ativos disponíveis com filtros."""
         raw = await self._brapi.list_assets(search=search, sector=sector)
         stocks = raw.get("stocks", [])
@@ -33,7 +35,7 @@ class AssetService:
             for s in stocks
         ]
 
-    async def available(self) -> list[dict]:
+    async def available(self) -> list[dict[str, Any]]:
         """Lista simplificada de ativos."""
         raw = await self._brapi.available()
         symbols = raw.get("symbols", [])

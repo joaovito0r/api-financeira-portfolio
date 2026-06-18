@@ -15,6 +15,7 @@ import httpx
 from fastapi import HTTPException
 
 from app.config import settings
+from app.core.validation import normalize_ticker
 
 
 class BrapiClient:
@@ -25,7 +26,7 @@ class BrapiClient:
     def __init__(self) -> None:
         """Inicializa cliente HTTP com token de autenticação."""
         token = settings.brapi_token
-        if not token or token == "***":
+        if not token:
             raise ValueError(
                 "BRAPI_TOKEN não configurado. "
                 "Defina BRAPI_TOKEN no .env ou adquira um em https://brapi.dev"
@@ -41,6 +42,14 @@ class BrapiClient:
         """Fecha a sessão HTTP."""
         await self._client.aclose()
 
+    @staticmethod
+    def _safe_ticker(ticker: str) -> str:
+        """Valida o ticker antes de inseri-lo na URL externa (evita injeção)."""
+        try:
+            return normalize_ticker(ticker)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+
     # ── Cotação ──────────────────────────────────────────────
 
     async def quote(self, ticker: str, modules: str | None = None) -> dict[str, Any]:
@@ -54,6 +63,7 @@ class BrapiClient:
         Returns:
             Dict com os dados da cotação.
         """
+        ticker = self._safe_ticker(ticker)
         params: dict[str, str] = {}
         if modules:
             params["modules"] = modules
@@ -72,7 +82,8 @@ class BrapiClient:
         Nota: No plano gratuito, apenas 1 ticker por request.
               Múltiplos tickers funcionam apenas nos planos pagos.
         """
-        params: dict[str, str] = {"tickers": ",".join(tickers)}
+        safe = [self._safe_ticker(t) for t in tickers]
+        params: dict[str, str] = {"tickers": ",".join(safe)}
         if modules:
             params["modules"] = modules
 
@@ -91,6 +102,7 @@ class BrapiClient:
             range: Período (1d, 5d, 1mo, 6mo, 1y, 5y, max).
             interval: Intervalo (1d, 1wk, 1mo).
         """
+        ticker = self._safe_ticker(ticker)
         return await self._get(
             f"/api/quote/{ticker}",
             params={"range": range, "interval": interval},
@@ -98,6 +110,7 @@ class BrapiClient:
 
     async def dividends(self, ticker: str) -> dict[str, Any]:
         """Histórico de dividendos/proventos de um ativo."""
+        ticker = self._safe_ticker(ticker)
         return await self._get(
             f"/api/quote/{ticker}",
             params={"dividends": "true"},
@@ -142,7 +155,8 @@ class BrapiClient:
         try:
             response = await self._client.get(path, params=params)
             response.raise_for_status()
-            return response.json()
+            data: dict[str, Any] = response.json()
+            return data
 
         except httpx.TimeoutException:
             raise HTTPException(

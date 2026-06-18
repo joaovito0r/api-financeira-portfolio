@@ -7,7 +7,8 @@ usando Argon2 (algoritmo vencedor da competição PHC).
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -33,7 +34,7 @@ def hash_password(password: str) -> str:
     Returns:
         Hash da senha no formato Argon2.
     """
-    return pwd_context.hash(password)
+    return str(pwd_context.hash(password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -46,7 +47,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True se a senha confere.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bool(pwd_context.verify(plain_password, hashed_password))
 
 
 def create_access_token(user_id: str) -> str:
@@ -58,17 +59,17 @@ def create_access_token(user_id: str) -> str:
     Returns:
         Token JWT codificado.
     """
-    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     payload = {
         "sub": user_id,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "type": "access",
     }
-    return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+    return str(jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM))
 
 
-def decode_access_token(token: str) -> dict | None:
+def decode_access_token(token: str) -> dict[str, Any] | None:
     """Decodifica e valida um token JWT.
 
     Args:
@@ -78,7 +79,9 @@ def decode_access_token(token: str) -> dict | None:
         Payload do token ou None se inválido/expirado.
     """
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        payload: dict[str, Any] = jwt.decode(
+            token, settings.secret_key, algorithms=[ALGORITHM]
+        )
         if payload.get("type") != "access":
             return None
         return payload

@@ -7,6 +7,9 @@ Uma vez salvos, dividendos passados nunca expiram.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
+
+from sqlalchemy import select
 
 from app.core.cache import DIVIDEND_CACHE
 from app.repositories.local.models import DividendModel, get_session
@@ -18,15 +21,15 @@ class LocalDividendRepository:
     def __init__(self) -> None:
         self._cache_policy = DIVIDEND_CACHE
 
-    async def get(self, ticker: str) -> list[dict] | None:
+    async def get(self, ticker: str) -> list[dict[str, Any]] | None:
         """Busca dividendos de um ativo no cache local."""
-        with get_session() as session:
-            dividends = (
-                session.query(DividendModel)
-                .filter(DividendModel.ticker == ticker.upper())
+        async with get_session() as session:
+            result = await session.execute(
+                select(DividendModel)
+                .where(DividendModel.ticker == ticker.upper())
                 .order_by(DividendModel.date.desc())
-                .all()
             )
+            dividends = result.scalars().all()
 
             if not dividends:
                 return None
@@ -44,13 +47,15 @@ class LocalDividendRepository:
                 for d in dividends
             ]
 
-    async def save(self, ticker: str, dividends_data: list[dict]) -> list[dict]:
+    async def save(
+        self, ticker: str, dividends_data: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Salva dividendos no cache local.
 
         Os dados já devem vir no formato padronizado:
         [{payment_date, value, type, reference_date}, ...]
         """
-        with get_session() as session:
+        async with get_session() as session:
             saved = []
             for item in dividends_data:
                 raw_date = item.get("payment_date", "")
@@ -82,5 +87,5 @@ class LocalDividendRepository:
                         else None,
                     }
                 )
-            session.commit()
+            await session.commit()
             return saved

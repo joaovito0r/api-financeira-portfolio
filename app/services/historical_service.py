@@ -6,6 +6,8 @@ Cache-first: dados históricos são imutáveis, salvos localmente.
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.ohlcv_repo import LocalOHLCVRepository
 
@@ -26,7 +28,7 @@ class HistoricalService:
         ticker: str,
         range: str = "1y",
         interval: str = "1d",
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Busca histórico OHLCV com cache."""
         # 1. Tenta cache local
         cached = await self._local.get(ticker)

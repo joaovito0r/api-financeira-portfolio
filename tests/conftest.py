@@ -16,21 +16,21 @@ from app.repositories.local.models import init_db
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_app() -> AsyncGenerator[None, None]:
-    """Inicializa banco e cliente brapi (como o lifespan faz)."""
-    init_db()
-    # Tenta inicializar o cliente brapi; se não tiver token, segue sem
-    try:
-        from app.repositories.brapi.client import BrapiClient
+    """Inicializa banco e sobrescreve cliente brapi com mock para testes."""
+    await init_db()
+    from unittest.mock import AsyncMock
 
-        app.state.brapi_client = BrapiClient()
-    except ValueError:
-        # Token não configurado nos testes — usa mock
-        from unittest.mock import AsyncMock
-
-        mock = AsyncMock()
-        mock.quote = AsyncMock(return_value={"results": [{}]})
-        mock.close = AsyncMock()
-        app.state.brapi_client = mock
+    mock = AsyncMock()
+    mock.quote = AsyncMock(return_value={"results": [{}]})
+    mock.multiple_quote = AsyncMock(return_value={"results": [{}, {}]})
+    mock.available = AsyncMock(return_value={"stocks": []})
+    mock.historical = AsyncMock(return_value={"historical_data": []})
+    mock.list_assets = AsyncMock(return_value={"stocks": []})
+    mock.dividends = AsyncMock(return_value={"dividends": {"cashDividends": []}})
+    mock.health = AsyncMock(return_value={"status": "ok"})
+    mock.close = AsyncMock()
+    mock.dictionary = AsyncMock(return_value={})
+    app.state.brapi_client = mock
     yield
     await app.state.brapi_client.close()
 

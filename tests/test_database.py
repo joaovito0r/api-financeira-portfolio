@@ -4,6 +4,8 @@ Testes de integração do banco de dados local.
 
 from __future__ import annotations
 
+from sqlalchemy import inspect, text
+
 from app.repositories.local.models import (
     OHLCVModel,
     QuoteModel,
@@ -12,10 +14,10 @@ from app.repositories.local.models import (
 )
 
 
-def test_database_connection() -> None:
+async def test_database_connection() -> None:
     """Verifica se o banco está acessível."""
-    with get_session() as session:
-        result = session.execute(__import__("sqlalchemy").text("SELECT 1"))
+    async with get_session() as session:
+        result = await session.execute(text("SELECT 1"))
         assert result.scalar() == 1
 
 
@@ -33,10 +35,12 @@ def test_ohlcv_model() -> None:
     assert hasattr(OHLCVModel, "close")
 
 
-def test_tables_exist() -> None:
+async def test_tables_exist() -> None:
     """Verifica se as tabelas foram criadas."""
-    inspector = __import__("sqlalchemy").inspect(engine)
-    tables = inspector.get_table_names()
+    async with engine.connect() as conn:
+        tables = await conn.run_sync(
+            lambda sync_conn: inspect(sync_conn).get_table_names()
+        )
     assert "assets" in tables
     assert "quotes" in tables
     assert "ohlcv" in tables

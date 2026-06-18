@@ -7,6 +7,8 @@ A brapi.dev retorna dividendos em formato {cashDividends: [...], stockDividends:
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.dividend_repo import LocalDividendRepository
 
@@ -22,7 +24,7 @@ class DividendService:
         self._brapi = brapi_client
         self._local = local_repo
 
-    async def get_dividends(self, ticker: str) -> list[dict]:
+    async def get_dividends(self, ticker: str) -> list[dict[str, Any]]:
         """Busca dividendos de um ativo com cache."""
         cached = await self._local.get(ticker)
         if cached:
@@ -31,7 +33,8 @@ class DividendService:
         raw = await self._brapi.dividends(ticker)
         div_data = raw.get("results", [{}])[0].get("dividendsData", {})
 
-        # brapi.dev retorna {cashDividends: [...], stockDividends: [...], \n        # subscriptions: [...]}
+        # brapi.dev retorna {cashDividends: [...], stockDividends: [...],
+        # subscriptions: [...]}
         cash_dividends = div_data.get("cashDividends", [])
         if not cash_dividends:
             return []

@@ -6,8 +6,8 @@ Distribuição de lucros aos acionistas.
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass
-from datetime import date
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ class Dividend:
     """
 
     ticker: str
-    date: date
+    date: datetime.date
     value: float
     type: str  # DIVIDENDO | JCP | BONIFICACAO
-    reference_date: date | None = None
+    reference_date: datetime.date | None = None

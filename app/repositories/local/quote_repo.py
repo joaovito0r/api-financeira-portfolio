@@ -1,14 +1,17 @@
 """
 Repositório local com cache em SQLite.
 
-Implementa a interface AbstractRepository para operações
-no banco local, com suporte a cache.
+Operações de leitura/escrita no banco local, com suporte a cache.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from app.core.cache import CachePolicy, QUOTE_CACHE
+from typing import Any
+
+from sqlalchemy import select
+
+from app.core.cache import QUOTE_CACHE, CachePolicy
 from app.repositories.local.models import (
     QuoteModel,
     get_session,
@@ -25,18 +28,18 @@ class LocalQuoteRepository:
     def __init__(self, cache_policy: CachePolicy = QUOTE_CACHE) -> None:
         self._cache_policy = cache_policy
 
-    async def get(self, ticker: str) -> dict | None:
+    async def get(self, ticker: str) -> dict[str, Any] | None:
         """Busca cotação no cache local.
 
         Retorna None se não encontrado ou cache expirado.
         """
-        with get_session() as session:
-            quote = (
-                session.query(QuoteModel)
-                .filter(QuoteModel.ticker == ticker.upper())
+        async with get_session() as session:
+            result = await session.execute(
+                select(QuoteModel)
+                .where(QuoteModel.ticker == ticker.upper())
                 .order_by(QuoteModel.cached_at.desc())
-                .first()
             )
+            quote = result.scalars().first()
 
             if not quote:
                 return None
@@ -58,9 +61,9 @@ class LocalQuoteRepository:
                 "timestamp": quote.cached_at.isoformat(),
             }
 
-    async def save(self, ticker: str, data: dict) -> dict:
+    async def save(self, ticker: str, data: dict[str, Any]) -> dict[str, Any]:
         """Salva cotação no cache local."""
-        with get_session() as session:
+        async with get_session() as session:
             quote = QuoteModel(
                 ticker=ticker.upper(),
                 price=data.get("regularMarketPrice", 0),
@@ -75,7 +78,7 @@ class LocalQuoteRepository:
                 cached_at=datetime.now(),
             )
             session.add(quote)
-            session.commit()
+            await session.commit()
 
             return {
                 "ticker": quote.ticker,

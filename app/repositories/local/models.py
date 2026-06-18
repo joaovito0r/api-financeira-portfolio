@@ -6,11 +6,10 @@ Define as tabelas e o engine para SQLite (dev) ou PostgreSQL (prod).
 
 from __future__ import annotations
 
+import datetime
 import uuid
-from datetime import date, datetime
 
 from sqlalchemy import (
-    Column,
     Date,
     DateTime,
     Float,
@@ -18,9 +17,13 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.config import settings
 
@@ -39,7 +42,9 @@ class AssetModel(Base):
     type: Mapped[str] = mapped_column(String(20))
     sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
     logo: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
 
 
 class QuoteModel(Base):
@@ -58,7 +63,9 @@ class QuoteModel(Base):
     open: Mapped[float] = mapped_column(Float)
     previous_close: Mapped[float] = mapped_column(Float)
     market_cap: Mapped[float | None] = mapped_column(Float, nullable=True)
-    cached_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    cached_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
 
 
 class OHLCVModel(Base):
@@ -68,7 +75,7 @@ class OHLCVModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
-    date: Mapped[date] = mapped_column(Date)
+    date: Mapped[datetime.date] = mapped_column(Date)
     open: Mapped[float] = mapped_column(Float)
     high: Mapped[float] = mapped_column(Float)
     low: Mapped[float] = mapped_column(Float)
@@ -83,10 +90,10 @@ class DividendModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
-    date: Mapped[date] = mapped_column(Date)
+    date: Mapped[datetime.date] = mapped_column(Date)
     value: Mapped[float] = mapped_column(Float)
     type: Mapped[str] = mapped_column(String(30))
-    reference_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    reference_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
 
 
 # ── Usuários ──────────────────────────────────────────
@@ -103,13 +110,15 @@ class UserModel(Base):
     name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now, onupdate=datetime.now
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
 
     # Relacionamentos
-    watchlists: Mapped[list["WatchlistModel"]] = relationship(
+    watchlists: Mapped[list[WatchlistModel]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -126,11 +135,13 @@ class WatchlistModel(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
 
     # Relacionamentos
-    user: Mapped["UserModel"] = relationship(back_populates="watchlists")
-    items: Mapped[list["WatchlistItemModel"]] = relationship(
+    user: Mapped[UserModel] = relationship(back_populates="watchlists")
+    items: Mapped[list[WatchlistItemModel]] = relationship(
         back_populates="watchlist", cascade="all, delete-orphan"
     )
 
@@ -150,10 +161,12 @@ class WatchlistItemModel(Base):
     )
     ticker: Mapped[str] = mapped_column(String(20))
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    added_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
 
     # Relacionamentos
-    watchlist: Mapped["WatchlistModel"] = relationship(back_populates="items")
+    watchlist: Mapped[WatchlistModel] = relationship(back_populates="items")
 
 
 class AlertModel(Base):
@@ -173,24 +186,35 @@ class AlertModel(Base):
         String(10)
     )  # "above" = dispara quando subir acima, "below" = quando cair abaixo
     triggered: Mapped[bool] = mapped_column(default=False)
-    triggered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    triggered_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
 
     # Relacionamentos
-    user: Mapped["UserModel"] = relationship()
+    user: Mapped[UserModel] = relationship()
 
 
-# ── Engine ──────────────────────────────────────────────
+# ── Engine async ─────────────────────────────────────────
 
-engine = create_engine(settings.database_url, echo=settings.debug)
-SessionLocal = sessionmaker(bind=engine)
-
-
-def init_db() -> None:
-    """Cria todas as tabelas no banco."""
-    Base.metadata.create_all(bind=engine)
+engine = create_async_engine(settings.database_url, echo=settings.debug)
+SessionLocal = async_sessionmaker(
+    bind=engine,
+    expire_on_commit=False,  # mantém atributos acessíveis após o commit
+)
 
 
-def get_session():
-    """Retorna uma nova sessão do banco."""
+async def init_db() -> None:
+    """Cria todas as tabelas no banco (de forma assíncrona)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+def get_session() -> AsyncSession:
+    """Retorna uma nova sessão assíncrona do banco.
+
+    Uso: ``async with get_session() as session: ...``
+    """
     return SessionLocal()

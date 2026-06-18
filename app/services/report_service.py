@@ -7,6 +7,10 @@ disponíveis: perfil, valuation, performance, dividendos, saúde financeira.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from app.core.concurrency import gather_limited
 from app.repositories.brapi.client import BrapiClient
 
 
@@ -16,57 +20,61 @@ class ReportService:
     def __init__(self, brapi_client: BrapiClient) -> None:
         self._brapi = brapi_client
 
-    async def generate_report(self, ticker: str) -> dict:
+    async def generate_report(self, ticker: str) -> dict[str, Any]:
         """Gera relatório completo de um ativo."""
         ticker = ticker.upper()
 
+        # As 8 chamadas ao brapi são independentes (mesmo ticker, módulos
+        # diferentes); rodam em paralelo com concorrência limitada para respeitar
+        # o rate limit do plano free.
+        (
+            quote_raw,
+            prof_raw,
+            fin_raw,
+            stats_raw,
+            hist_raw,
+            div_raw,
+            bs_raw,
+            dre_raw,
+        ) = await gather_limited(
+            self._brapi.quote(ticker),
+            self._brapi.quote(ticker, modules="summaryProfile"),
+            self._brapi.quote(ticker, modules="financialData"),
+            self._brapi.quote(ticker, modules="defaultKeyStatistics"),
+            self._brapi.historical(ticker, range="1y", interval="1d"),
+            self._brapi.dividends(ticker),
+            self._brapi.quote(ticker, modules="balanceSheetHistory"),
+            self._brapi.quote(ticker, modules="incomeStatementHistory"),
+        )
+
         # 1. Cotação + dados básicos
-        quote_raw = await self._brapi.quote(ticker)
         quote = quote_raw.get("results", [{}])[0]
-
         # 2. Perfil
-        prof_raw = await self._brapi.quote(ticker, modules="summaryProfile")
         profile = prof_raw.get("results", [{}])[0].get("summaryProfile", {})
-
         # 3. Indicadores
-        fin_raw = await self._brapi.quote(ticker, modules="financialData")
         fin = fin_raw.get("results", [{}])[0].get("financialData", {})
-
         # 4. Estatísticas
-        stats_raw = await self._brapi.quote(ticker, modules="defaultKeyStatistics")
         stats = stats_raw.get("results", [{}])[0].get("defaultKeyStatistics", {})
-
-        # 5. Histórico recente (1 ano para calcular retornos)
-        hist_raw = await self._brapi.historical(ticker, range="1y", interval="1d")
+        # 5. Histórico recente (1 ano) → retornos
         hist_data = hist_raw.get("results", [{}])[0].get("historicalDataPrice", [])
-
-        # Calcula retornos
         returns = self._calculate_returns(hist_data)
-
         # 6. Dividendos
-        div_raw = await self._brapi.dividends(ticker)
         div_data = div_raw.get("results", [{}])[0].get("dividendsData", {})
         cash_divs = div_data.get("cashDividends", [])
-
         # 7. BP (último)
-        bs_raw = await self._brapi.quote(ticker, modules="balanceSheetHistory")
         bs_list = bs_raw.get("results", [{}])[0].get("balanceSheetHistory", [])
         latest_bs = bs_list[0] if bs_list else {}
-
         # 8. DRE (último)
-        dre_raw = await self._brapi.quote(ticker, modules="incomeStatementHistory")
         dre_list = dre_raw.get("results", [{}])[0].get("incomeStatementHistory", [])
         latest_dre = dre_list[0] if dre_list else {}
 
-        from datetime import datetime, timedelta, timezone
-
-        hoje = datetime.now(timezone.utc)
+        hoje = datetime.now(UTC)
         um_ano_atras = hoje - timedelta(days=365)
 
         def parse_date(ds: str) -> datetime:
             """Converte data ISO pra datetime com timezone."""
             clean = ds[:10].replace("Z", "")
-            return datetime.fromisoformat(clean).replace(tzinfo=timezone.utc)
+            return datetime.fromisoformat(clean).replace(tzinfo=UTC)
 
         divs_recentes = [
             d
@@ -83,14 +91,12 @@ class ReportService:
             reverse=True,
         )
         proximo_pagamento = (
-            divs_ordenados[0].get("paymentDate", "")[:10]
-            if divs_ordenados
-            else None
+            divs_ordenados[0].get("paymentDate", "")[:10] if divs_ordenados else None
         )
 
         return {
             "ticker": ticker,
-            "gerado_em": __import__("datetime").datetime.now().isoformat(),
+            "gerado_em": datetime.now(UTC).isoformat(),
             "visao_geral": {
                 "empresa": profile.get("longName", quote.get("shortName", "")),
                 "setor": profile.get("sector"),
@@ -156,7 +162,7 @@ class ReportService:
             },
         }
 
-    def _calculate_returns(self, hist_data: list[dict]) -> dict:
+    def _calculate_returns(self, hist_data: list[dict[str, Any]]) -> dict[str, Any]:
         """Calcula retornos percentuais para diferentes períodos."""
         if not hist_data:
             return {"1m": None, "6m": None, "1y": None}

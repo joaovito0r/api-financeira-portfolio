@@ -6,10 +6,11 @@ Compara dois ou mais ativos lado a lado com métricas-chave.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Request
+from typing import Any
 
-from app.repositories.brapi.client import BrapiClient
-from app.services.fundamental_service import FundamentalService
+from fastapi import APIRouter, HTTPException, Query, Request
+
+from app.core.validation import normalize_ticker
 
 router = APIRouter(tags=["Comparação"])
 
@@ -23,16 +24,19 @@ router = APIRouter(tags=["Comparação"])
     ),
 )
 async def compare(
+    request: Request,
     tickers: str = Query(
         ..., description="Tickers separados por vírgula (ex: PETR4,VALE3)"
     ),
-    request: Request = None,
-) -> dict:
+) -> dict[str, Any]:
     """Compara múltiplos ativos com métricas fundamentalistas."""
-    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    try:
+        ticker_list = [
+            normalize_ticker(t) for t in tickers.split(",") if t.strip()
+        ]
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if len(ticker_list) < 2:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400,
             detail="Informe pelo menos 2 tickers para comparar",
@@ -52,9 +56,7 @@ async def compare(
 
         # Busca estatísticas
         stats_raw = await brapi.quote(ticker, modules="defaultKeyStatistics")
-        stats_data = stats_raw.get("results", [{}])[0].get(
-            "defaultKeyStatistics", {}
-        )
+        stats_data = stats_raw.get("results", [{}])[0].get("defaultKeyStatistics", {})
 
         # Busca perfil
         prof_raw = await brapi.quote(ticker, modules="summaryProfile")

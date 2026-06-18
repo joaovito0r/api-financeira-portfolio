@@ -183,7 +183,7 @@ Cliente → GET /api/quote/PETR4
 | HTTP | httpx | 0.28+ |
 | Config | pydantic-settings | 2.7+ |
 | Banco dev | SQLite (aiosqlite) | — |
-| Banco prod | PostgreSQL (psycopg) | 16+ |
+| Banco prod | PostgreSQL (asyncpg) | 16+ |
 | Linter/Formatter | ruff | 0.9+ |
 | Type checker | mypy (strict) | 1.14+ |
 | Testes | pytest + pytest-asyncio | 8.0+ |

@@ -7,6 +7,9 @@ brapi.dev, persistência local.
 
 from __future__ import annotations
 
+from typing import Any
+
+from app.core.concurrency import gather_limited
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.quote_repo import LocalQuoteRepository
 
@@ -29,7 +32,7 @@ class QuoteService:
         self._brapi = brapi_client
         self._local = local_repo
 
-    async def get_quote(self, ticker: str) -> dict:
+    async def get_quote(self, ticker: str) -> dict[str, Any]:
         """Busca cotação de um ativo com cache."""
         # 1. Tenta cache local
         cached = await self._local.get(ticker)
@@ -43,10 +46,8 @@ class QuoteService:
         # 3. Salva no cache
         return await self._local.save(ticker, result)
 
-    async def get_multiple_quotes(self, tickers: list[str]) -> list[dict]:
-        """Busca cotações de múltiplos ativos."""
-        results = []
-        for ticker in tickers:
-            quote = await self.get_quote(ticker.strip().upper())
-            results.append(quote)
-        return results
+    async def get_multiple_quotes(self, tickers: list[str]) -> list[dict[str, Any]]:
+        """Busca cotações de múltiplos ativos em paralelo (concorrência limitada)."""
+        return await gather_limited(
+            *(self.get_quote(ticker.strip().upper()) for ticker in tickers)
+        )

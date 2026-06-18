@@ -7,6 +7,9 @@ Cache perpétuo: dados históricos são imutáveis após o pregão.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
+
+from sqlalchemy import select
 
 from app.core.cache import OHLCV_CACHE
 from app.repositories.local.models import OHLCVModel, get_session
@@ -18,15 +21,15 @@ class LocalOHLCVRepository:
     def __init__(self) -> None:
         self._cache_policy = OHLCV_CACHE
 
-    async def get(self, ticker: str) -> list[dict] | None:
+    async def get(self, ticker: str) -> list[dict[str, Any]] | None:
         """Busca histórico OHLCV de um ativo no cache local."""
-        with get_session() as session:
-            records = (
-                session.query(OHLCVModel)
-                .filter(OHLCVModel.ticker == ticker.upper())
+        async with get_session() as session:
+            result = await session.execute(
+                select(OHLCVModel)
+                .where(OHLCVModel.ticker == ticker.upper())
                 .order_by(OHLCVModel.date)
-                .all()
             )
+            records = result.scalars().all()
 
             if not records:
                 return None
@@ -44,9 +47,11 @@ class LocalOHLCVRepository:
                 for r in records
             ]
 
-    async def save(self, ticker: str, history: list[dict]) -> list[dict]:
+    async def save(
+        self, ticker: str, history: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Salva histórico OHLCV no cache local."""
-        with get_session() as session:
+        async with get_session() as session:
             saved = []
             for item in history:
                 raw_date = item.get("date", "")
@@ -78,5 +83,5 @@ class LocalOHLCVRepository:
                         "volume": model.volume,
                     }
                 )
-            session.commit()
+            await session.commit()
             return saved

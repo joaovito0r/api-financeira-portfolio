@@ -4,8 +4,11 @@ Rota de relatório de ativos.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Request
 
+from app.api.deps import valid_ticker
 from app.services.report_service import ReportService
 
 router = APIRouter(tags=["Relatórios"])
@@ -19,7 +22,9 @@ router = APIRouter(tags=["Relatórios"])
         "valuation, indicadores, saúde financeira e dividendos."
     ),
 )
-async def get_report(ticker: str, request: Request) -> dict:
+async def get_report(
+    request: Request, ticker: str = Depends(valid_ticker)
+) -> dict[str, Any]:
     """Relatório completo de um ativo."""
     service = ReportService(brapi_client=request.app.state.brapi_client)
-    return await service.generate_report(ticker.upper())
+    return await service.generate_report(ticker)

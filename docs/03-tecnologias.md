@@ -12,7 +12,7 @@
 | **HTTP Client** | httpx | 0.28+ | Async, connection pooling, TestClient |
 | **Config** | pydantic-settings | 2.7+ | Config type-safe via .env |
 | **Banco dev** | SQLite (aiosqlite) | — | Zero config, ideal para testes |
-| **Banco prod** | PostgreSQL (psycopg) | 16+ | Concorrência, performance |
+| **Banco prod** | PostgreSQL (asyncpg) | 16+ | Concorrência, performance |
 
 ## Ferramentas de Qualidade
 
@@ -54,4 +54,4 @@
 - pre-commit >= 4.0.0
 
 ### Produção (PostgreSQL)
-- psycopg[binary] >= 3.2.0
+- asyncpg >= 0.30.0

@@ -6,6 +6,10 @@ Gerencia registro, login, e consulta de perfil.
 
 from __future__ import annotations
 
+from typing import Any
+
+from sqlalchemy import select
+
 from app.core.security import (
     create_access_token,
     get_user_id_from_token,
@@ -18,7 +22,7 @@ from app.repositories.local.models import UserModel, get_session
 class AuthService:
     """Serviço de autenticação."""
 
-    async def register(self, name: str, email: str, password: str) -> dict:
+    async def register(self, name: str, email: str, password: str) -> dict[str, Any]:
         """Registra um novo usuário.
 
         Args:
@@ -32,13 +36,12 @@ class AuthService:
         Raises:
             ValueError: Se o email já estiver cadastrado.
         """
-        with get_session() as session:
-            existing = (
-                session.query(UserModel)
-                .filter(UserModel.email == email.lower())
-                .first()
+
+        async with get_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.email == email.lower())
             )
-            if existing:
+            if result.scalars().first():
                 raise ValueError("Email já cadastrado")
 
             user = UserModel(
@@ -47,8 +50,8 @@ class AuthService:
                 password_hash=hash_password(password),
             )
             session.add(user)
-            session.commit()
-            session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
 
             token = create_access_token(user.id)
             return {
@@ -62,7 +65,7 @@ class AuthService:
                 },
             }
 
-    async def login(self, email: str, password: str) -> dict:
+    async def login(self, email: str, password: str) -> dict[str, Any]:
         """Autentica um usuário.
 
         Args:
@@ -75,12 +78,12 @@ class AuthService:
         Raises:
             ValueError: Se email ou senha estiverem incorretos.
         """
-        with get_session() as session:
-            user = (
-                session.query(UserModel)
-                .filter(UserModel.email == email.lower())
-                .first()
+
+        async with get_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.email == email.lower())
             )
+            user = result.scalars().first()
             if not user or not verify_password(password, user.password_hash):
                 raise ValueError("Email ou senha incorretos")
 
@@ -96,7 +99,7 @@ class AuthService:
                 },
             }
 
-    async def get_current_user(self, token: str) -> dict:
+    async def get_current_user(self, token: str) -> dict[str, Any]:
         """Retorna dados do usuário a partir do token JWT.
 
         Args:
@@ -112,8 +115,11 @@ class AuthService:
         if not user_id:
             raise ValueError("Token inválido ou expirado")
 
-        with get_session() as session:
-            user = session.query(UserModel).filter(UserModel.id == user_id).first()
+        async with get_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.id == user_id)
+            )
+            user = result.scalars().first()
             if not user:
                 raise ValueError("Usuário não encontrado")
 

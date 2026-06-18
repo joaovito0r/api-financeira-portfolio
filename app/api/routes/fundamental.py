@@ -6,8 +6,11 @@ Perfil da empresa, BP, DRE, indicadores e estatísticas.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Request
 
+from app.api.deps import valid_ticker
 from app.services.fundamental_service import FundamentalService
 
 
@@ -24,11 +27,11 @@ router = APIRouter(prefix="/api/quote/{ticker}", tags=["Fundamentalistas"])
     description="Dados cadastrais e descrição da empresa.",
 )
 async def get_profile(
-    ticker: str,
+    ticker: str = Depends(valid_ticker),
     service: FundamentalService = Depends(get_fundamental_service),
-) -> dict:
+) -> dict[str, Any]:
     """Perfil da empresa."""
-    return await service.get_profile(ticker.upper())
+    return await service.get_profile(ticker)
 
 
 @router.get(
@@ -37,12 +40,12 @@ async def get_profile(
     description="BP: ativos, passivos e patrimônio líquido.",
 )
 async def get_balance_sheet(
-    ticker: str,
+    ticker: str = Depends(valid_ticker),
     service: FundamentalService = Depends(get_fundamental_service),
-) -> dict:
+) -> dict[str, Any]:
     """Balanço Patrimonial."""
-    data = await service.get_balance_sheet(ticker.upper())
-    return {"ticker": ticker.upper(), "balance_sheets": data}
+    data = await service.get_balance_sheet(ticker)
+    return {"ticker": ticker, "balance_sheets": data}
 
 
 @router.get(
@@ -51,12 +54,12 @@ async def get_balance_sheet(
     description="Demonstrativo de Resultados: receita, lucro, EBITDA.",
 )
 async def get_income_statement(
-    ticker: str,
+    ticker: str = Depends(valid_ticker),
     service: FundamentalService = Depends(get_fundamental_service),
-) -> dict:
+) -> dict[str, Any]:
     """DRE."""
-    data = await service.get_income_statement(ticker.upper())
-    return {"ticker": ticker.upper(), "income_statements": data}
+    data = await service.get_income_statement(ticker)
+    return {"ticker": ticker, "income_statements": data}
 
 
 @router.get(
@@ -65,11 +68,11 @@ async def get_income_statement(
     description="ROE, ROA, margens, crescimento, dívida/PL.",
 )
 async def get_indicators(
-    ticker: str,
+    ticker: str = Depends(valid_ticker),
     service: FundamentalService = Depends(get_fundamental_service),
-) -> dict:
+) -> dict[str, Any]:
     """Indicadores financeiros."""
-    return await service.get_indicators(ticker.upper())
+    return await service.get_indicators(ticker)
 
 
 @router.get(
@@ -78,8 +81,8 @@ async def get_indicators(
     description="P/VP, P/L, EV/EBITDA, beta, DY, VPA, LPA.",
 )
 async def get_statistics(
-    ticker: str,
+    ticker: str = Depends(valid_ticker),
     service: FundamentalService = Depends(get_fundamental_service),
-) -> dict:
+) -> dict[str, Any]:
     """Estatísticas-chave."""
-    return await service.get_statistics(ticker.upper())
+    return await service.get_statistics(ticker)

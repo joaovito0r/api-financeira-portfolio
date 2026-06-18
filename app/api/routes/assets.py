@@ -4,6 +4,8 @@ Rotas de listagem de ativos.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.schemas.asset import AssetListResponse
@@ -27,7 +29,7 @@ async def list_assets(
     search: str | None = Query(None, description="Busca por nome/ticker"),
     sector: str | None = Query(None, description="Filtrar por setor"),
     service: AssetService = Depends(get_asset_service),
-) -> dict:
+) -> dict[str, Any]:
     """Lista ativos disponíveis na B3."""
     assets = await service.list_assets(search=search, sector=sector)
     return {"assets": assets, "total": len(assets)}
@@ -40,7 +42,7 @@ async def list_assets(
 )
 async def available(
     service: AssetService = Depends(get_asset_service),
-) -> dict:
+) -> dict[str, Any]:
     """Lista simplificada de ativos."""
     symbols = await service.available()
     return {"symbols": symbols, "total": len(symbols)}
