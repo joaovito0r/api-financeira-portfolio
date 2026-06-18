@@ -11,11 +11,15 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import rate_limit_data, valid_ticker
+from app.repositories.local.cache_repo import GenericCacheRepository
 from app.services.fundamental_service import FundamentalService
 
 
 def get_fundamental_service(request: Request) -> FundamentalService:
-    return FundamentalService(brapi_client=request.app.state.brapi_client)
+    return FundamentalService(
+        brapi_client=request.app.state.brapi_client,
+        cache_repo=GenericCacheRepository(),
+    )
 
 
 router = APIRouter(prefix="/api/quote/{ticker}", tags=["Fundamentalistas"])
