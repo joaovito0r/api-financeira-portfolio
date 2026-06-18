@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import valid_ticker
+from app.api.deps import rate_limit_expensive, valid_ticker
 from app.services.report_service import ReportService
 
 router = APIRouter(tags=["Relatórios"])
@@ -21,6 +21,7 @@ router = APIRouter(tags=["Relatórios"])
         "Gera um relatório completo com visão geral, performance, "
         "valuation, indicadores, saúde financeira e dividendos."
     ),
+    dependencies=[Depends(rate_limit_expensive)],
 )
 async def get_report(
     request: Request, ticker: str = Depends(valid_ticker)

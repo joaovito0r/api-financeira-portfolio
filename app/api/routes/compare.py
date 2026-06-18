@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from app.api.deps import rate_limit_expensive
+from app.core.concurrency import gather_limited
 from app.core.validation import normalize_ticker
 
 router = APIRouter(tags=["Comparação"])
@@ -22,6 +24,7 @@ router = APIRouter(tags=["Comparação"])
         "Compara dois ou mais ativos lado a lado com métricas "
         "como P/L, P/VP, DY, ROE, EV/EBITDA, etc."
     ),
+    dependencies=[Depends(rate_limit_expensive)],
 )
 async def compare(
     request: Request,
@@ -31,9 +34,7 @@ async def compare(
 ) -> dict[str, Any]:
     """Compara múltiplos ativos com métricas fundamentalistas."""
     try:
-        ticker_list = [
-            normalize_ticker(t) for t in tickers.split(",") if t.strip()
-        ]
+        ticker_list = [normalize_ticker(t) for t in tickers.split(",") if t.strip()]
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     if len(ticker_list) < 2:
@@ -43,23 +44,34 @@ async def compare(
         )
 
     brapi = request.app.state.brapi_client
+
+    # As 4 chamadas por ticker (cotação, indicadores, estatísticas, perfil) são
+    # independentes entre si e entre tickers; rodam todas em paralelo com
+    # concorrência limitada para respeitar o rate limit do plano free.
+    raw_results = await gather_limited(
+        *(brapi.quote(ticker) for ticker in ticker_list),
+        *(brapi.quote(ticker, modules="financialData") for ticker in ticker_list),
+        *(
+            brapi.quote(ticker, modules="defaultKeyStatistics")
+            for ticker in ticker_list
+        ),
+        *(brapi.quote(ticker, modules="summaryProfile") for ticker in ticker_list),
+    )
+    n = len(ticker_list)
+    quote_raws, fin_raws, stats_raws, prof_raws = (
+        raw_results[:n],
+        raw_results[n : 2 * n],
+        raw_results[2 * n : 3 * n],
+        raw_results[3 * n :],
+    )
+
     results = []
-
-    for ticker in ticker_list:
-        # Busca cotação
-        quote_raw = await brapi.quote(ticker)
+    for ticker, quote_raw, fin_raw, stats_raw, prof_raw in zip(
+        ticker_list, quote_raws, fin_raws, stats_raws, prof_raws, strict=True
+    ):
         quote = quote_raw.get("results", [{}])[0]
-
-        # Busca indicadores
-        fin_raw = await brapi.quote(ticker, modules="financialData")
         fin_data = fin_raw.get("results", [{}])[0].get("financialData", {})
-
-        # Busca estatísticas
-        stats_raw = await brapi.quote(ticker, modules="defaultKeyStatistics")
         stats_data = stats_raw.get("results", [{}])[0].get("defaultKeyStatistics", {})
-
-        # Busca perfil
-        prof_raw = await brapi.quote(ticker, modules="summaryProfile")
         profile = prof_raw.get("results", [{}])[0].get("summaryProfile", {})
 
         results.append(

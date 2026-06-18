@@ -13,7 +13,12 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from app.api.deps import get_quote_service, valid_ticker
+from app.api.deps import (
+    get_quote_service,
+    rate_limit_data,
+    rate_limit_expensive,
+    valid_ticker,
+)
 from app.core.validation import normalize_ticker
 from app.repositories.local.ohlcv_repo import LocalOHLCVRepository
 from app.schemas.quote import QuoteListResponse, QuoteResponse
@@ -36,6 +41,7 @@ router = APIRouter(prefix="/api", tags=["Cotações"])
     response_model=QuoteResponse,
     summary="Cotação de um ativo",
     description="Retorna a cotação em tempo real de um ativo com cache de 15min.",
+    dependencies=[Depends(rate_limit_data)],
 )
 async def get_quote(
     ticker: str = Depends(valid_ticker),
@@ -50,6 +56,7 @@ async def get_quote(
     response_model=QuoteListResponse,
     summary="Cotação de múltiplos ativos",
     description="Retorna cotações de vários ativos em uma requisição.",
+    dependencies=[Depends(rate_limit_expensive)],
 )
 async def get_multiple_quotes(
     tickers: str = Query(..., description="Tickers separados por vírgula"),
@@ -70,6 +77,7 @@ async def get_multiple_quotes(
     "/quote/{ticker}/history",
     summary="Histórico OHLCV",
     description="Histórico de preços de um ativo com cache perpétuo.",
+    dependencies=[Depends(rate_limit_data)],
 )
 async def get_history(
     ticker: str = Depends(valid_ticker),

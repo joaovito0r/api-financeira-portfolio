@@ -6,6 +6,9 @@ Inicializa o app, configura middlewares e registra as rotas.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import math
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -27,6 +30,8 @@ from app.api.routes import (
     watchlists,
 )
 from app.config import settings
+from app.core.exceptions import RateLimitError
+from app.core.warm_cache import warm_cache_loop
 from app.repositories.brapi.client import BrapiClient
 from app.repositories.local.models import init_db
 
@@ -38,8 +43,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings.check_production_ready()
     await init_db()
     app.state.brapi_client = BrapiClient()
+
+    warm_task: asyncio.Task[None] | None = None
+    if settings.warm_cache_enabled:
+        warm_task = asyncio.create_task(warm_cache_loop(app))
+        app.state.warm_cache_task = warm_task
+
     yield
-    # Shutdown: fecha conexões
+
+    # Shutdown: cancela a task de cache quente e fecha conexões
+    if warm_task is not None:
+        warm_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await warm_task
     await app.state.brapi_client.close()
 
 
@@ -115,6 +131,25 @@ async def validation_error_handler(
     return JSONResponse(
         status_code=422,
         content={"detail": erros},
+    )
+
+
+@app.exception_handler(RateLimitError)
+async def rate_limit_handler(
+    _request: Request, exc: RateLimitError
+) -> JSONResponse:
+    """Responde 429 com Retry-After quando o token bucket é excedido."""
+    is_inf = exc.retry_after == float("inf")
+    retry = 60 if is_inf else max(1, math.ceil(exc.retry_after))
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": "Limite de requisições excedido. Tente novamente em instantes."
+        },
+        headers={
+            "Retry-After": str(retry),
+            "X-RateLimit-Limit": str(exc.limit),
+        },
     )
 
 

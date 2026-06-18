@@ -36,6 +36,25 @@ class Settings(BaseSettings):
     # Cache
     quote_cache_ttl: int = 900  # 15 minutos
 
+    # Rate limiting (token bucket em memória)
+    rate_limit_enabled: bool = True
+    rate_limit_auth_per_min: int = 60
+    rate_limit_auth_burst: int = 100
+    rate_limit_public_per_min: int = 10
+    rate_limit_data_per_min: int = 60
+    rate_limit_data_burst: int = 100
+    rate_limit_expensive_per_min: int = 10
+    rate_limit_max_buckets: int = 10000  # teto de chaves vivas no RateLimiter
+
+    # Throttle de saída à brapi (protege a quota do plano free)
+    brapi_max_concurrency: int = 4
+    brapi_min_interval_sec: float = 0.0
+
+    # Cache quente (background)
+    warm_cache_enabled: bool = True
+    warm_cache_interval_sec: int = 900  # 15 min
+    warm_cache_max_tickers: int = 25  # N/T ≤ 1,7 com T=15min
+
     # Segurança
     secret_key: str = ""
 

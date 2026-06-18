@@ -5,6 +5,10 @@ Agrupa perfil, BP, DRE, indicadores e estatísticas.
 
 NOTA: A brapi.dev retorna valores diretamente (sem wrapper .raw).
 balanceSheetHistory e incomeStatementHistory são listas, não dicts.
+
+Todas as consultas seguem o padrão cache-first: tenta ler do
+GenericCacheRepository antes de chamar a brapi.dev; em caso de
+cache-miss, busca na brapi e persiste o resultado no cache.
 """
 
 from __future__ import annotations
@@ -12,14 +16,24 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from app.core.cache import (
+    BALANCE_SHEET_CACHE,
+    INDICATOR_CACHE,
+    PROFILE_CACHE,
+    STATISTIC_CACHE,
+)
 from app.repositories.brapi.client import BrapiClient
+from app.repositories.local.cache_repo import GenericCacheRepository
 
 
 class FundamentalService:
     """Serviço de consulta de dados fundamentalistas."""
 
-    def __init__(self, brapi_client: BrapiClient) -> None:
+    def __init__(
+        self, brapi_client: BrapiClient, cache_repo: GenericCacheRepository
+    ) -> None:
         self._brapi = brapi_client
+        self._cache = cache_repo
 
     @staticmethod
     def _parse_date(value: str | int | None) -> str | None:
@@ -33,10 +47,15 @@ class FundamentalService:
         return None
 
     async def get_profile(self, ticker: str) -> dict[str, Any]:
-        """Perfil da empresa."""
+        """Perfil da empresa (cache-first)."""
+        key = f"profile:{ticker.upper()}"
+        cached = await self._cache.get(key, PROFILE_CACHE)
+        if cached is not None:
+            return cached  # type: ignore[no-any-return]
+
         raw = await self._brapi.quote(ticker, modules="summaryProfile")
         profile = raw.get("results", [{}])[0].get("summaryProfile", {})
-        return {
+        result = {
             "ticker": ticker.upper(),
             "address": profile.get("address1"),
             "city": profile.get("city"),
@@ -48,13 +67,19 @@ class FundamentalService:
             "description": profile.get("longBusinessSummary"),
             "employees": profile.get("fullTimeEmployees"),
         }
+        return await self._cache.save(key, result, PROFILE_CACHE)  # type: ignore[no-any-return]
 
     async def get_balance_sheet(self, ticker: str) -> list[dict[str, Any]]:
-        """Balanço Patrimonial."""
+        """Balanço Patrimonial (cache-first)."""
+        key = f"balance:{ticker.upper()}"
+        cached = await self._cache.get(key, BALANCE_SHEET_CACHE)
+        if cached is not None:
+            return cached  # type: ignore[no-any-return]
+
         raw = await self._brapi.quote(ticker, modules="balanceSheetHistory")
         sheets = raw.get("results", [{}])[0].get("balanceSheetHistory", [])
 
-        return [
+        result = [
             {
                 "ticker": ticker.upper(),
                 "end_date": self._parse_date(bs.get("endDate")),
@@ -67,13 +92,19 @@ class FundamentalService:
             }
             for bs in sheets
         ]
+        return await self._cache.save(key, result, BALANCE_SHEET_CACHE)  # type: ignore[no-any-return]
 
     async def get_income_statement(self, ticker: str) -> list[dict[str, Any]]:
-        """DRE."""
+        """DRE (cache-first)."""
+        key = f"income:{ticker.upper()}"
+        cached = await self._cache.get(key, BALANCE_SHEET_CACHE)
+        if cached is not None:
+            return cached  # type: ignore[no-any-return]
+
         raw = await self._brapi.quote(ticker, modules="incomeStatementHistory")
         statements = raw.get("results", [{}])[0].get("incomeStatementHistory", [])
 
-        return [
+        result = [
             {
                 "ticker": ticker.upper(),
                 "end_date": self._parse_date(st.get("endDate")),
@@ -86,12 +117,18 @@ class FundamentalService:
             }
             for st in statements
         ]
+        return await self._cache.save(key, result, BALANCE_SHEET_CACHE)  # type: ignore[no-any-return]
 
     async def get_indicators(self, ticker: str) -> dict[str, Any]:
-        """Indicadores financeiros."""
+        """Indicadores financeiros (cache-first)."""
+        key = f"indicators:{ticker.upper()}"
+        cached = await self._cache.get(key, INDICATOR_CACHE)
+        if cached is not None:
+            return cached  # type: ignore[no-any-return]
+
         raw = await self._brapi.quote(ticker, modules="financialData")
         data = raw.get("results", [{}])[0].get("financialData", {})
-        return {
+        result = {
             "ticker": ticker.upper(),
             "current_price": data.get("currentPrice"),
             "target_price": data.get("targetMeanPrice"),
@@ -105,12 +142,18 @@ class FundamentalService:
             "earnings_growth": data.get("earningsGrowth"),
             "debt_to_equity": data.get("debtToEquity"),
         }
+        return await self._cache.save(key, result, INDICATOR_CACHE)  # type: ignore[no-any-return]
 
     async def get_statistics(self, ticker: str) -> dict[str, Any]:
-        """Estatísticas-chave."""
+        """Estatísticas-chave (cache-first)."""
+        key = f"statistics:{ticker.upper()}"
+        cached = await self._cache.get(key, STATISTIC_CACHE)
+        if cached is not None:
+            return cached  # type: ignore[no-any-return]
+
         raw = await self._brapi.quote(ticker, modules="defaultKeyStatistics")
         data = raw.get("results", [{}])[0].get("defaultKeyStatistics", {})
-        return {
+        result = {
             "ticker": ticker.upper(),
             "price_to_book": data.get("priceToBook"),
             "forward_pe": data.get("forwardPE"),
@@ -125,3 +168,4 @@ class FundamentalService:
             "week_high_52": data.get("fiftyTwoWeekHigh"),
             "week_low_52": data.get("fiftyTwoWeekLow"),
         }
+        return await self._cache.save(key, result, STATISTIC_CACHE)  # type: ignore[no-any-return]
