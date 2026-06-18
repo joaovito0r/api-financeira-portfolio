@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
+from typing import Any
 
 from sqlalchemy import (
     Date,
@@ -17,6 +18,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    event,
 )
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -24,6 +26,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.pool import ConnectionPoolEntry
 
 from app.config import settings
 
@@ -212,11 +215,39 @@ class AlertModel(Base):
 
 # ── Engine async ─────────────────────────────────────────
 
-engine = create_async_engine(settings.database_url, echo=settings.debug)
+_is_sqlite = settings.database_url.startswith("sqlite")
+
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.debug,
+    # connect_args é específico do driver; aiosqlite repassa "timeout" ao
+    # sqlite3.connect() subjacente (busy_timeout em segundos).
+    connect_args={"timeout": 30} if _is_sqlite else {},
+)
 SessionLocal = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,  # mantém atributos acessíveis após o commit
 )
+
+if _is_sqlite:
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(
+        dbapi_connection: Any, _connection_record: ConnectionPoolEntry
+    ) -> None:
+        """WAL: leitores não bloqueiam escritores nem vice-versa.
+
+        SQLite (não Postgres/asyncpg de produção) só permite um escritor por
+        vez; o modo de journal padrão (rollback journal) faz um escritor
+        colidir com uma leitura longa em andamento. WAL evita esse caso, e
+        ``connect_args={"timeout": 30}`` acima cobre o caso restante
+        (escritor vs. escritor) fazendo a conexão esperar em vez de falhar
+        imediatamente com "database is locked".
+        """
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
 
 async def init_db() -> None:

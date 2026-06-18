@@ -4,11 +4,15 @@ Testes de integração do banco de dados local.
 
 from __future__ import annotations
 
+import asyncio
+import uuid
+
 from sqlalchemy import inspect, text
 
 from app.repositories.local.models import (
     OHLCVModel,
     QuoteModel,
+    UserModel,
     engine,
     get_session,
 )
@@ -45,3 +49,27 @@ async def test_tables_exist() -> None:
     assert "quotes" in tables
     assert "ohlcv" in tables
     assert "dividends" in tables
+
+
+async def test_sqlite_usa_wal() -> None:
+    """WAL evita que um escritor colida com uma leitura longa em andamento."""
+    async with engine.connect() as conn:
+        result = await conn.execute(text("PRAGMA journal_mode"))
+        assert result.scalar() == "wal"
+
+
+async def test_escritas_concorrentes_nao_lancam_database_locked() -> None:
+    """Várias sessões escrevendo ao mesmo tempo não devem falhar com lock."""
+
+    async def write(i: int) -> None:
+        async with get_session() as session:
+            session.add(
+                UserModel(
+                    name=f"Concorrente {i}",
+                    email=f"concorrente_{uuid.uuid4().hex[:8]}_{i}@example.com",
+                    password_hash="hash",
+                )
+            )
+            await session.commit()
+
+    await asyncio.gather(*(write(i) for i in range(20)))
