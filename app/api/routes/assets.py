@@ -9,12 +9,16 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import rate_limit_data
+from app.repositories.local.cache_repo import GenericCacheRepository
 from app.schemas.asset import AssetListResponse
 from app.services.asset_service import AssetService
 
 
 def get_asset_service(request: Request) -> AssetService:
-    return AssetService(brapi_client=request.app.state.brapi_client)
+    return AssetService(
+        brapi_client=request.app.state.brapi_client,
+        cache_repo=GenericCacheRepository(),
+    )
 
 
 router = APIRouter(prefix="/api", tags=["Ativos"])

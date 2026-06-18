@@ -82,3 +82,30 @@ async def test_fundamental_usa_cache_no_segundo_acesso() -> None:
     assert first["sector"] == "Energia"
     assert second["sector"] == "Energia"
     brapi.quote.assert_awaited_once()  # 2º acesso veio do cache
+
+
+@pytest.mark.asyncio
+async def test_lista_ativos_usa_cache() -> None:
+    """Testa que lista de ativos é cache-first (2º acesso não bate brapi)."""
+    await init_db()
+    brapi = AsyncMock()
+    brapi.list_assets = AsyncMock(
+        return_value={"stocks": [{"stock": "PETR4", "name": "Petrobras"}]}
+    )
+    from sqlalchemy import delete
+
+    from app.repositories.local.models import CacheEntryModel, get_session
+
+    async with get_session() as session:
+        await session.execute(
+            delete(CacheEntryModel).where(CacheEntryModel.key == "assets:all::")
+        )
+        await session.commit()
+
+    from app.core.cache import ASSET_LIST_CACHE  # noqa: F401
+    from app.services.asset_service import AssetService
+
+    service = AssetService(brapi_client=brapi, cache_repo=GenericCacheRepository())
+    await service.list_assets()
+    await service.list_assets()
+    brapi.list_assets.assert_awaited_once()
