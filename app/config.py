@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     rate_limit_data_burst: int = 100
     rate_limit_expensive_per_min: int = 10
 
+    # Throttle de saída à brapi (protege a quota do plano free)
+    brapi_max_concurrency: int = 4
+    brapi_min_interval_sec: float = 0.0
+
     # Segurança
     secret_key: str = ""
 

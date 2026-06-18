@@ -9,6 +9,8 @@ Adaptado do projeto original do usuário com melhorias:
 
 from __future__ import annotations
 
+import asyncio
+import time as _time
 from typing import Any
 
 import httpx
@@ -16,6 +18,27 @@ from fastapi import HTTPException
 
 from app.config import settings
 from app.core.validation import normalize_ticker
+
+# Throttle global de saída à brapi: protege a quota do plano free limitando
+# a concorrência e o intervalo mínimo entre chamadas HTTP reais, compartilhado
+# por todas as instâncias de BrapiClient (semáforo de módulo, não por chamada).
+_brapi_semaphore = asyncio.Semaphore(settings.brapi_max_concurrency)
+_MIN_INTERVAL = settings.brapi_min_interval_sec
+_last_call_lock = asyncio.Lock()
+_last_call_at = 0.0
+
+
+async def _throttle() -> None:
+    """Garante o intervalo mínimo global entre chamadas à brapi."""
+    global _last_call_at
+    if _MIN_INTERVAL <= 0:
+        return
+    async with _last_call_lock:
+        now = _time.monotonic()
+        wait = _MIN_INTERVAL - (now - _last_call_at)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_call_at = _time.monotonic()
 
 
 class BrapiClient:
@@ -151,9 +174,11 @@ class BrapiClient:
     async def _get(
         self, path: str, params: dict[str, str] | None = None
     ) -> dict[str, Any]:
-        """Executa GET request com tratamento de erro."""
+        """Executa GET request com tratamento de erro e throttle global."""
         try:
-            response = await self._client.get(path, params=params)
+            async with _brapi_semaphore:
+                await _throttle()
+                response = await self._client.get(path, params=params)
             response.raise_for_status()
             data: dict[str, Any] = response.json()
             return data
