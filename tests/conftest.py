@@ -23,6 +23,10 @@ async def setup_app() -> AsyncGenerator[None, None]:
     # seguidas às rotas de watchlist/alert) estoure os baldes globais.
     # Os testes específicos de rate limit religam via monkeypatch.
     settings.rate_limit_enabled = False
+    # Desliga o cache quente: o lifespan não roda no ASGITransport por padrão,
+    # mas deixamos explícito para evitar surpresa se algum teste usar
+    # LifespanManager — a task de background não deve competir com a suíte.
+    settings.warm_cache_enabled = False
     from unittest.mock import AsyncMock
 
     mock = AsyncMock()

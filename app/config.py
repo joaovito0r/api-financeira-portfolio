@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     brapi_max_concurrency: int = 4
     brapi_min_interval_sec: float = 0.0
 
+    # Cache quente (background)
+    warm_cache_enabled: bool = True
+    warm_cache_interval_sec: int = 900  # 15 min
+    warm_cache_max_tickers: int = 25  # N/T ≤ 1,7 com T=15min
+
     # Segurança
     secret_key: str = ""
 
