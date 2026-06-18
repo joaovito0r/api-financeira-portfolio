@@ -169,10 +169,7 @@
   <div class="header">
     <h1>Watchlists</h1>
     <div style="display:flex;align-items:center;gap:8px;">
-      ${helpLegend('leg-wl', {
-        'P/L': 'Preço dividido pelo Lucro por Ação. Indica quantos anos para recuperar.',
-        'DY': 'Dividend Yield. Retorno anual em dividendos sobre o preço atual.',
-      })}
+      <span id="leg-wl-container"></span>
       <button class="btn btn-primary" onclick="criarWatchlist()">
         <span data-icon="plus" data-icon-size="14"></span> Nova Lista
       </button>
@@ -363,6 +360,11 @@ async function adicionarItem() {
 document.addEventListener('click', e => {
   const sug = document.getElementById('suggestions');
   if (sug && !e.target.closest('.search-row')) sug.classList.remove('show');
+});
+
+document.getElementById('leg-wl-container').innerHTML = helpLegend('leg-wl', {
+  'P/L': 'Preço dividido pelo Lucro por Ação. Indica quantos anos para recuperar.',
+  'DY': 'Dividend Yield. Retorno anual em dividendos sobre o preço atual.',
 });
 
 document.addEventListener('DOMContentLoaded', autoLogin);
