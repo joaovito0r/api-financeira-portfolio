@@ -135,8 +135,10 @@ Priorizado. Itens identificados no diagnóstico e **ainda não atacados**.
       `gather_limited`, preservando a ordem dos resultados.
 - [x] Testes em `tests/test_concurrency.py` (ordem preservada, limite respeitado,
       lista vazia).
-- Obs.: `compare.py` também faz chamadas sequenciais por ticker; fica como
-  oportunidade futura (não estava na lista original do item 4).
+- [x] `compare.py` também fazia chamadas sequenciais por ticker (não estava na
+      lista original do item 4). ✅ **CONCLUÍDO (2026-06-18).** As 4 chamadas
+      por ticker (cotação, indicadores, estatísticas, perfil) agora rodam em
+      paralelo via `gather_limited` para todos os tickers de uma vez.
 
 ### 5. Segurança (menor, contexto portfólio)
 - [ ] `secret_key` default `""` em dev assina JWT com chave vazia. Gerar default
