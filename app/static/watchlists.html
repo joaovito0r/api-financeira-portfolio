@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Financeira — Watchlists</title>
+  <title>API Financeira — Listas</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d6a51c'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -155,7 +155,7 @@
   <div class="sidebar-logo">Finanças</div>
   <a class="sidebar-item" href="/"><span data-icon="chart"></span> Dashboard</a>
   <a class="sidebar-item" href="/static/carteira.html"><span data-icon="wallet"></span> Carteira</a>
-  <a class="sidebar-item active" href="/static/watchlists.html"><span data-icon="star"></span> Watchlists</a>
+  <a class="sidebar-item active" href="/static/watchlists.html"><span data-icon="star"></span> Listas</a>
   <a class="sidebar-item" href="/static/comparar.html"><span data-icon="compare"></span> Comparar</a>
   <a class="sidebar-item" href="/static/relatorio.html"><span data-icon="report"></span> Relatório</a>
   <a class="sidebar-item" href="/static/alertas.html"><span data-icon="bell"></span> Alertas</a>
@@ -167,7 +167,7 @@
 
 <main class="main">
   <div class="header">
-    <h1>Watchlists</h1>
+    <h1>Listas</h1>
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="leg-wl-container"></span>
       <button class="btn btn-primary" onclick="criarWatchlist()">
@@ -208,7 +208,7 @@ async function carregarTudo() {
     wlData = d.watchlists || [];
     renderTabs();
     if (wlData.length > 0) selecionarWl(wlData[0].id);
-    else area.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Nenhuma watchlist ainda. Crie uma!</span></div>`;
+    else area.innerHTML = `<div class="loading-state"><span data-icon="info" data-icon-size="16"></span><span>Nenhuma lista ainda. Crie uma!</span></div>`;
     hydrateIcons(area);
   } catch(e) {
     area.innerHTML = `<div class="loading-state"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
@@ -222,7 +222,7 @@ function renderTabs() {
   wlData.forEach(w => {
     c.innerHTML += `<div class="tab ${w.id === currentWlId ? 'active':''}" onclick="selecionarWl('${w.id}')" tabindex="0" role="tab">${escapeHtml(w.name || 'Sem nome')} <span class="cnt">${w.item_count||0}</span></div>`;
   });
-  c.innerHTML += `<button class="tab-add" onclick="criarWatchlist()" title="Nova watchlist" aria-label="Nova watchlist">+</button>`;
+  c.innerHTML += `<button class="tab-add" onclick="criarWatchlist()" title="Nova lista" aria-label="Nova lista">+</button>`;
 }
 
 async function selecionarWl(id) {
@@ -273,19 +273,19 @@ async function selecionarWl(id) {
 }
 
 async function criarWatchlist() {
-  const nome = await showPrompt('Nova Watchlist', 'Nome da lista');
+  const nome = await showPrompt('Nova Lista', 'Nome da lista');
   if (!nome) return;
   try {
     await fetch(`/me/watchlists?name=${encodeURIComponent(nome)}`, {
       method:'POST', headers:{'Authorization':`Bearer ${token}`}
     });
-    showToast('Watchlist criada', 'success');
+    showToast('Lista criada', 'success');
     carregarTudo();
   } catch(e) { showAlert('Erro: '+e.message, 'Erro'); }
 }
 
 async function removerItem(wlId, ticker) {
-  const ok = await showConfirm(`Remover ${ticker} da watchlist?`, 'Remover', { danger: true });
+  const ok = await showConfirm(`Remover ${ticker} da lista?`, 'Remover', { danger: true });
   if (!ok) return;
   try {
     await fetch(`/me/watchlists/${wlId}/items/${ticker}`, {
@@ -322,7 +322,7 @@ async function buscarAtivos(query) {
 }
 
 async function adicionarItem() {
-  if (!token || !currentWlId) { showAlert('Selecione uma watchlist primeiro', 'Atenção'); return; }
+  if (!token || !currentWlId) { showAlert('Selecione uma lista primeiro', 'Atenção'); return; }
   const input = document.getElementById('add-ticker-input');
   const ticker = input.value.trim().toUpperCase();
   if (!ticker) return;
