@@ -13,10 +13,11 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import RequestResponseEndpoint
 
 from app.api.routes import (
     alerts,
@@ -154,6 +155,24 @@ async def rate_limit_handler(_request: Request, exc: RateLimitError) -> JSONResp
 
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+
+@app.middleware("http")
+async def no_cache_static(
+    request: Request, call_next: RequestResponseEndpoint
+) -> Response:
+    """Força revalidação (If-None-Match) em vez de cache heurístico do navegador.
+
+    Sem Cache-Control, o navegador decide por conta própria por quanto tempo
+    reaproveitar uma página estática sem perguntar ao servidor — o que fazia
+    o usuário ver ora a versão antiga (em cache), ora a nova, da mesma página
+    HTML logo após um deploy/edição. ETag/Last-Modified (já enviados pelo
+    StaticFiles) continuam permitindo 304 quando o arquivo não mudou.
+    """
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/", response_model=None)
