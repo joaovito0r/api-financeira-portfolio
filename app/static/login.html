@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Financeira — Entrar</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23d6a51c'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-hover));
+    }
+    .auth-logo {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-logo .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand); box-shadow: 0 0 12px var(--brand-glow);
+    }
+    .auth-sub {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-sec);
+      margin-bottom: 24px;
+    }
+    .auth-tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 20px; }
+    .auth-tab {
+      flex: 1; text-align: center; padding: 8px; border-radius: 5px;
+      font-size: 12px; font-weight: 600; color: var(--text-sec); cursor: pointer;
+      transition: all var(--t-fast) var(--ease);
+    }
+    .auth-tab.active { background: var(--brand-soft); color: var(--brand-hover); }
+    .auth-field { margin-bottom: 14px; }
+    .auth-field label { display: block; font-size: 11px; color: var(--text-sec); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .auth-field input {
+      width: 100%; padding: 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+      font-size: 13px; font-family: var(--font); outline: none;
+      transition: border-color var(--t-fast) var(--ease);
+    }
+    .auth-field input:focus { border-color: var(--brand); }
+    .auth-error {
+      font-size: 12px; color: var(--danger); margin-bottom: 12px; min-height: 16px;
+    }
+    .auth-submit { width: 100%; justify-content: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="auth-card">
+  <div class="auth-logo"><span class="dot"></span> Finanças</div>
+  <div class="auth-sub">Acesse sua conta para ver carteira, watchlists e alertas</div>
+
+  <div class="auth-tabs">
+    <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</div>
+    <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Criar conta</div>
+  </div>
+
+  <div class="auth-error" id="auth-error"></div>
+
+  <form id="form-login" onsubmit="event.preventDefault(); doLogin();">
+    <div class="auth-field">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" required placeholder="voce@email.com" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label for="login-password">Senha</label>
+      <input id="login-password" type="password" required placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary auth-submit" type="submit">Entrar</button>
+  </form>
+
+  <form id="form-register" style="display:none;" onsubmit="event.preventDefault(); doRegister();">
+    <div class="auth-field">
+      <label for="reg-name">Nome</label>
+      <input id="reg-name" required placeholder="Seu nome" autocomplete="name">
+    </div>
+    <div class="auth-field">
+      <label for="reg-email">Email</label>
+      <input id="reg-email" type="email" required placeholder="voce@email.com" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label for="reg-password">Senha</label>
+      <input id="reg-password" type="password" required minlength="8" placeholder="mínimo 8 caracteres" autocomplete="new-password">
+    </div>
+    <button class="btn btn-primary auth-submit" type="submit">Criar conta</button>
+  </form>
+</div>
+
+<script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
+<script>
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-error').textContent = '';
+}
+
+function redirectAfterAuth() {
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect');
+  window.location.href = redirect || '/';
+}
+
+function showAuthError(msg) {
+  document.getElementById('auth-error').textContent = msg;
+}
+
+async function doLogin() {
+  showAuthError('');
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  try {
+    const resp = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { showAuthError(data.detail || 'Email ou senha incorretos'); return; }
+    localStorage.setItem('token', data.access_token);
+    redirectAfterAuth();
+  } catch (e) {
+    showAuthError('Erro de conexão. Tente novamente.');
+  }
+}
+
+async function doRegister() {
+  showAuthError('');
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  try {
+    const resp = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      const detail = Array.isArray(data.detail)
+        ? data.detail.map(d => d.mensagem || d).join('; ')
+        : (data.detail || 'Não foi possível criar a conta');
+      showAuthError(detail);
+      return;
+    }
+    localStorage.setItem('token', data.access_token);
+    redirectAfterAuth();
+  } catch (e) {
+    showAuthError('Erro de conexão. Tente novamente.');
+  }
+}
+
+// Se já está logado, não faz sentido mostrar a tela de login de novo
+if (getToken()) redirectAfterAuth();
+</script>
+</body>
+</html>
