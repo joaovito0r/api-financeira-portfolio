@@ -25,6 +25,7 @@ from app.api.routes import (
     compare,
     dividends,
     fundamental,
+    portfolio,
     quotes,
     reports,
     watchlists,
@@ -69,15 +70,16 @@ app = FastAPI(
 
 # ── Registro de Rotas ──────────────────────────────
 
-app.include_router(quotes.router)
-app.include_router(dividends.router)
-app.include_router(assets.router)
-app.include_router(fundamental.router)
-app.include_router(auth.router)
-app.include_router(watchlists.router)
-app.include_router(compare.router)
-app.include_router(reports.router)
 app.include_router(alerts.router)
+app.include_router(assets.router)
+app.include_router(auth.router)
+app.include_router(compare.router)
+app.include_router(dividends.router)
+app.include_router(fundamental.router)
+app.include_router(portfolio.router)
+app.include_router(quotes.router)
+app.include_router(reports.router)
+app.include_router(watchlists.router)
 
 
 # ── Handlers de Erro ──────────────────────────────
