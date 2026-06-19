@@ -111,6 +111,7 @@
 
 <script src="/static/icons.js?v=2"></script>
 <script src="/static/api.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ─── Configuração ───────────────────────────────────────────────────────────
 const DEFAULT_TICKERS = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
@@ -579,23 +580,86 @@ async function renderChart(ticker) {
       } catch(e) {}
     }
 
-    let html = '';
-    for (let i = 0; i < last12.length; i++) {
-      const pct = ((last12[i].close - min) / range);
-      const px = Math.max(pct * chartH * 0.8, 8);
+    const labels = last12.map((c, i) => {
       const mi = (now.getMonth() - (last12.length - 1 - i) + 12) % 12;
-      const dateStr = last12[i].date ? last12[i].date.substring(0,7) : '';
-      const divVal = divsByMonth[dateStr] || 0;
+      return months[mi];
+    });
+    const priceData = last12.map(c => c.close);
+    const divData = last12.map(c => {
+      const dateStr = c.date ? c.date.substring(0,7) : '';
+      return divsByMonth[dateStr] || 0;
+    });
 
-      html += `<div class="chart-col">
-        <div class="chart-value-label">${formatMoney(last12[i].close)}</div>
-        ${window._showDivs && divVal > 0 ? `<div style="color:var(--success);font-size:9px;margin-bottom:1px;">${formatMoney(divVal)}</div>` : ''}
-        <div class="chart-bar" style="height:${px.toFixed(0)}px"></div>
-        ${window._showDivs && divVal > 0 ? `<div style="height:3px;background:var(--success);border-radius:2px;width:60%;margin:1px 0;"></div>` : ''}
-        <span class="chart-label">${months[mi]}</span>
-      </div>`;
+    container.innerHTML = '<canvas id="price-chart"></canvas>';
+    const ctx = document.getElementById('price-chart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, chartH || 220);
+    gradient.addColorStop(0, 'rgba(214, 165, 28, 0.35)');
+    gradient.addColorStop(1, 'rgba(214, 165, 28, 0)');
+
+    const datasets = [{
+      type: 'line',
+      label: 'Preço',
+      data: priceData,
+      borderColor: '#d6a51c',
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 3,
+      pointBackgroundColor: '#d6a51c',
+      pointHoverRadius: 5,
+      borderWidth: 2,
+      yAxisID: 'y',
+    }];
+
+    if (window._showDivs) {
+      datasets.push({
+        type: 'bar',
+        label: 'Dividendos',
+        data: divData,
+        backgroundColor: 'rgba(45, 212, 110, 0.6)',
+        borderRadius: 3,
+        yAxisID: 'y1',
+      });
     }
-    container.innerHTML = html;
+
+    if (window._priceChart) window._priceChart.destroy();
+    window._priceChart = new Chart(ctx, {
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: window._showDivs, labels: { color: '#9191a6', font: { size: 11 } } },
+          tooltip: {
+            backgroundColor: '#1b1d25',
+            borderColor: '#2b2d38',
+            borderWidth: 1,
+            titleColor: '#eaeaef',
+            bodyColor: '#eaeaef',
+            callbacks: {
+              label: (ctx) => ctx.dataset.label === 'Preço'
+                ? ` Preço: ${formatMoney(ctx.parsed.y)}`
+                : ` Dividendos: ${formatMoney(ctx.parsed.y)}`,
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#9191a6', font: { size: 10 } } },
+          y: {
+            position: 'left',
+            grid: { color: '#1e2028' },
+            ticks: { color: '#9191a6', font: { size: 10 }, callback: (v) => formatMoney(v) },
+          },
+          y1: {
+            display: !!window._showDivs,
+            position: 'right',
+            grid: { display: false },
+            ticks: { color: '#9191a6', font: { size: 10 }, callback: (v) => formatMoney(v) },
+          },
+        },
+      },
+    });
 
     const sub = document.getElementById('chart-sub');
     if (sub) {
