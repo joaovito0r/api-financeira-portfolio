@@ -472,11 +472,37 @@ async function carregarDistribuicao() {
 }
 
 // ─── Tabela de ativos ──────────────────────────────────────────────────────
-async function carregarTabela(statistics) {
-  const tickers = DEFAULT_TICKERS;
+async function getMainWatchlistTickers() {
+  try {
+    const r = await fetch('/me/watchlists', { headers: authHeaders() });
+    if (!r.ok) return [];
+    const data = await r.json();
+    const lists = (data.watchlists || [])
+      .slice()
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    if (lists.length === 0) return [];
+
+    const r2 = await fetch(`/me/watchlists/${lists[0].id}/items`, { headers: authHeaders() });
+    if (!r2.ok) return [];
+    const itemsData = await r2.json();
+    return (itemsData.items || []).map(it => it.ticker || it);
+  } catch (e) {
+    return [];
+  }
+}
+
+async function carregarTabela() {
   const tbody = document.getElementById('assets-tbody');
   const badge = document.getElementById('table-badge');
+  const tickers = await getMainWatchlistTickers();
 
+  if (tickers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-sec);padding:24px;">Sua lista principal está vazia. <a href="/static/watchlists.html" style="color:var(--brand-hover);">Adicione ativos</a> para vê-los aqui.</td></tr>`;
+    badge.textContent = 'Lista Principal · 0 ativos';
+    return;
+  }
+
+  const statistics = await fetchAllStatistics(tickers);
   const results = await Promise.allSettled(tickers.map(t => apiGet(`/api/quote/${t}`)));
 
   tbody.innerHTML = '';
@@ -761,13 +787,13 @@ async function carregarAlertBar() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return; // já redirecionou para o login
 
-  // Busca statistics uma vez, compartilha entre cards e tabela
+  // Busca statistics do DY Médio (card 4), baseado nos tickers de vitrine
   const statistics = await fetchAllStatistics(DEFAULT_TICKERS);
 
   // Carrega em paralelo
   await Promise.allSettled([
     carregarCards(statistics),
-    carregarTabela(statistics),
+    carregarTabela(),
     carregarDistribuicao(),
     renderChart(selectedTicker),
     carregarAlertBar(),
