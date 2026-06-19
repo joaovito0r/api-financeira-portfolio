@@ -142,6 +142,7 @@ function initSidebar() {
 // ── Modal de Confirmação (reutilizável) ─────────────────────
 
 let _modalState = null;
+let _closeModalTimer = null;
 
 function _buildModalContainer() {
   if (document.getElementById('hermes-confirm-overlay')) return;
@@ -174,6 +175,7 @@ function _buildModalContainer() {
 }
 
 function _openModal() {
+  if (_closeModalTimer) { clearTimeout(_closeModalTimer); _closeModalTimer = null; }
   const overlay = document.getElementById('hermes-confirm-overlay');
   overlay.classList.remove('closing');
   overlay.classList.add('show');
@@ -188,9 +190,11 @@ function _closeModal() {
   const overlay = document.getElementById('hermes-confirm-overlay');
   if (!overlay) return;
   overlay.classList.add('closing');
-  setTimeout(() => {
+  if (_closeModalTimer) clearTimeout(_closeModalTimer);
+  _closeModalTimer = setTimeout(() => {
     overlay.classList.remove('show', 'closing');
     document.body.style.overflow = '';
+    _closeModalTimer = null;
   }, 200);
 }
 
