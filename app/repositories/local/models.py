@@ -213,6 +213,28 @@ class AlertModel(Base):
     user: Mapped[UserModel] = relationship()
 
 
+class PortfolioPositionModel(Base):
+    """Tabela de posições da carteira do usuário (ticker/quantidade/custo médio)."""
+
+    __tablename__ = "portfolio_positions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    ticker: Mapped[str] = mapped_column(String(20))
+    quantity: Mapped[int] = mapped_column(Integer)
+    avg_cost: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.now
+    )
+
+    # Relacionamentos
+    user: Mapped[UserModel] = relationship()
+
+
 # ── Engine async ─────────────────────────────────────────
 
 _is_sqlite = settings.database_url.startswith("sqlite")
