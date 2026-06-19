@@ -28,7 +28,7 @@
     <span data-icon="wallet"></span> Carteira
   </a>
   <a class="sidebar-item" href="/static/watchlists.html">
-    <span data-icon="star"></span> Watchlists
+    <span data-icon="star"></span> Listas
   </a>
   <a class="sidebar-item" href="/static/comparar.html">
     <span data-icon="compare"></span> Comparar
@@ -96,7 +96,7 @@
         <h3><span data-icon="factory"></span> Principais Ativos</h3>
         <div id="table-help-legend"></div>
       </div>
-      <span class="badge" id="table-badge">Watchlist Principal · 4 ativos</span>
+      <span class="badge" id="table-badge">Lista Principal · 4 ativos</span>
     </div>
     <table id="assets-table">
       <thead><tr>
@@ -524,7 +524,7 @@ async function carregarTabela(statistics) {
     }
   });
 
-  badge.textContent = `Watchlist Principal · ${loaded} ativos`;
+  badge.textContent = `Lista Principal · ${loaded} ativos`;
   hydrateIcons(tbody);
 
   // Suporte a teclado
