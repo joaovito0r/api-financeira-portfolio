@@ -7,8 +7,6 @@
 
 /* ── Fontes ──────────────────────────────────────────────────────────────── */
 /* Preconnect: economiza ~100ms no primeiro carregamento de fontes */
-@font-face-glyph-layout: latin;
-
 /* Google Fonts já é importado pelo <link> em cada página com display=swap */
 
 /* ── Design Tokens ───────────────────────────────────────────────────────── */
