@@ -127,28 +127,8 @@
 <script>
 async function carregarPerfil() {
   const area = document.getElementById('profile-area');
-  let token = localStorage.getItem('token');
-
-  if (!token) {
-    try {
-      const r = await fetch('/auth/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: 'test@test.com', password: '12345678'})
-      });
-      if (r.ok) {
-        const d = await r.json();
-        token = d.access_token;
-        localStorage.setItem('token', token);
-      }
-    } catch(e) {}
-  }
-
-  if (!token) {
-    area.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login para ver seu perfil</span></div>`;
-    hydrateIcons(area);
-    return;
-  }
+  const token = requireAuth();
+  if (!token) return; // requireAuth() já redirecionou para o login
 
   area.innerHTML = '<div class="loading-state"><span class="spinner"></span><span>Carregando…</span></div>';
 
@@ -236,12 +216,26 @@ async function carregarPerfil() {
   }
 }
 
-function editarPerfil(nomeAtual) {
-  showPrompt('Editar Perfil', 'Novo nome', nomeAtual).then(nome => {
-    if (!nome) return;
-    showToast('Nome atualizado para: ' + nome, 'success');
+async function editarPerfil(nomeAtual) {
+  const nome = await showPrompt('Editar Perfil', 'Novo nome', nomeAtual);
+  if (!nome) return;
+  try {
+    const r = await fetch('/auth/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ name: nome }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      const detail = Array.isArray(data.detail) ? data.detail.map(d => d.mensagem || d).join('; ') : data.detail;
+      showAlert(detail || 'Não foi possível atualizar o perfil', 'Erro');
+      return;
+    }
+    showToast('Nome atualizado para: ' + data.name, 'success');
     setTimeout(() => location.reload(), 600);
-  });
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'Erro');
+  }
 }
 
 async function alterarSenha() {
@@ -251,7 +245,19 @@ async function alterarSenha() {
   if (!nova || nova.length < 8) { showAlert('Senha muito curta (mínimo 8 caracteres)', 'Validação'); return; }
   const confirma = await showPrompt('Alterar Senha', 'Confirme a nova senha');
   if (nova !== confirma) { showAlert('Senhas não conferem', 'Erro'); return; }
-  showToast('Senha alterada com sucesso!', 'success');
+
+  try {
+    const r = await fetch('/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ current_password: atual, new_password: nova }),
+    });
+    const data = await r.json();
+    if (!r.ok) { showAlert(data.detail || 'Não foi possível trocar a senha', 'Erro'); return; }
+    showToast('Senha alterada com sucesso!', 'success');
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'Erro');
+  }
 }
 
 async function logout() {
@@ -259,7 +265,7 @@ async function logout() {
   if (!ok) return;
   localStorage.removeItem('token');
   showToast('Desconectado', 'success');
-  setTimeout(() => location.reload(), 600);
+  setTimeout(() => { window.location.href = '/static/login.html'; }, 600);
 }
 
 document.addEventListener('DOMContentLoaded', carregarPerfil);
