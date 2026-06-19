@@ -218,7 +218,7 @@ function showConfirm(msg, btnText = 'Confirmar', opts = {}) {
     const cb = _modalState?.cb;
     _modalState = null;
     _closeModal();
-    if (cb) cb();
+    if (cb) cb(true);
   };
 
   actEl.appendChild(cancelBtn);
