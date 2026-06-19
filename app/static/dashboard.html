@@ -759,6 +759,8 @@ async function carregarAlertBar() {
 
 // ─── Inicialização ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!requireAuth()) return; // já redirecionou para o login
+
   // Busca statistics uma vez, compartilha entre cards e tabela
   const statistics = await fetchAllStatistics(DEFAULT_TICKERS);
 
