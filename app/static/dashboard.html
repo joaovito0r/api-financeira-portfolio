@@ -418,18 +418,57 @@ async function carregarDistribuicao() {
     }))
     .sort((a, b) => b.value - a.value);
 
-  body.innerHTML = items.map(item => `
-    <div class="bar-section">
-      <div class="bar-row">
-        <span class="bar-label">
-          <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${item.color};"></span>
-          ${escapeHtml(item.label)}
-        </span>
-        <span class="bar-pct">${item.pct.toFixed(0)}%</span>
+  body.innerHTML = `
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <div style="position:relative;width:140px;height:140px;flex-shrink:0;">
+        <canvas id="sector-chart"></canvas>
       </div>
-      <div class="bar-track"><div class="bar-fill" style="width:${item.pct.toFixed(1)}%;background:linear-gradient(90deg, ${item.color}, ${item.color}cc);"></div></div>
-    </div>
-  `).join('');
+      <div style="flex:1;min-width:160px;">
+        ${items.map(item => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;">
+            <span style="display:flex;align-items:center;gap:6px;color:var(--text-sec);">
+              <span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${item.color};"></span>
+              ${escapeHtml(item.label)}
+            </span>
+            <span style="font-family:var(--mono);color:var(--text);font-weight:600;">${item.pct.toFixed(0)}%</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+
+  const ctx = document.getElementById('sector-chart').getContext('2d');
+  if (window._sectorChart) window._sectorChart.destroy();
+  window._sectorChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: items.map(i => i.label),
+      datasets: [{
+        data: items.map(i => i.value),
+        backgroundColor: items.map(i => i.color),
+        borderColor: '#13151b',
+        borderWidth: 2,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1b1d25',
+          borderColor: '#2b2d38',
+          borderWidth: 1,
+          titleColor: '#eaeaef',
+          bodyColor: '#eaeaef',
+          callbacks: {
+            label: (ctx) => ` ${ctx.label}: ${formatMoney(ctx.parsed)}`,
+          },
+        },
+      },
+    },
+  });
 }
 
 // ─── Tabela de ativos ──────────────────────────────────────────────────────
