@@ -246,32 +246,21 @@
 <script src="/static/icons.js"></script>
 <script src="/static/api.js"></script>
 <script>
-// Portfolio via localStorage
-const STORAGE_KEY = 'financeiro_carteira';
 const COLORS = ['gold','blue','green','orange','violet','teal'];
 const ICON_MAP = { 'gold':'droplets','blue':'factory','green':'bank','orange':'bank','violet':'spark','teal':'zap' };
 const NAMES = { 'gold':'Petrobras','blue':'Vale','green':'Itaú','orange':'Banco do Brasil','violet':'Outro','teal':'Energia' };
 
-function getPortfolio() {
-  let data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
-    data = [
-      { ticker:'PETR4', qty:120, cost:38.80 },
-      { ticker:'VALE3', qty:80, cost:50.60 },
-      { ticker:'ITUB4', qty:150, cost:34.00 },
-      { ticker:'BBAS3', qty:200, cost:26.90 },
-    ];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    return data;
-  }
-  return JSON.parse(data);
+let token = null;
+
+async function carregarPortfolio() {
+  const r = await fetch('/me/portfolio', { headers: authHeaders() });
+  if (!r.ok) throw new Error('Não foi possível carregar a carteira');
+  const data = await r.json();
+  // Mapeia quantity/avg_cost (nomes do backend) pra qty/cost (nomes usados no render)
+  return data.positions.map(p => ({ id: p.id, ticker: p.ticker, qty: p.quantity, cost: p.avg_cost }));
 }
 
-function savePortfolio(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function renderCard(ticker, qty, cost, colorIdx, q, totalVal) {
+function renderCard(id, ticker, qty, cost, colorIdx, q, totalVal) {
   const color = COLORS[colorIdx % COLORS.length];
   const iconName = ICON_MAP[color] || 'trendingUp';
   const price = q ? q.price : 0;
@@ -282,7 +271,7 @@ function renderCard(ticker, qty, cost, colorIdx, q, totalVal) {
   const pct = totalVal > 0 ? (val / totalVal) * 100 : 0;
 
   return `<div class="card pos-card" data-ticker="${ticker}" onclick="window.location='/static/relatorio.html?${ticker}'">
-    <button class="delete-btn" onclick="event.stopPropagation();removerAtivo('${ticker}')" aria-label="Remover ${ticker}">${icon('x', { size: 12 })}</button>
+    <button class="delete-btn" onclick="event.stopPropagation();removerAtivo('${id}','${ticker}')" aria-label="Remover ${ticker}">${icon('x', { size: 12 })}</button>
     <div class="card-top">
       <div class="card-company">
         <div class="icon-box icon-${color}">${icon(iconName, { size: 18 })}</div>
@@ -303,18 +292,28 @@ function renderCard(ticker, qty, cost, colorIdx, q, totalVal) {
   </div>`;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const portfolio = getPortfolio();
+async function carregarTudo() {
   const grid = document.getElementById('positions-grid');
+  let portfolio;
+  try {
+    portfolio = await carregarPortfolio();
+  } catch (e) {
+    grid.innerHTML = `<div class="loading-state" style="width:100%;grid-column:1/-1;"><span data-icon="error" data-icon-size="16"></span><span>${escapeHtml(e.message)}</span></div>`;
+    hydrateIcons(grid);
+    return;
+  }
+
   if (!portfolio || portfolio.length === 0) {
     grid.innerHTML = `<div class="loading-state" style="width:100%;grid-column:1/-1;"><span data-icon="info" data-icon-size="16"></span><span>Carteira vazia. Clique em "+ Novo Ativo" para começar.</span></div>`;
     hydrateIcons(grid);
     document.getElementById('total-positions').textContent = '0';
+    document.getElementById('total-value').textContent = formatMoney(0);
     return;
   }
 
   let totalVal = 0, totalCost = 0, totalShares = 0;
   const quotes = {};
+  const dyByTicker = {};
 
   for (const item of portfolio) {
     try {
@@ -329,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   grid.innerHTML = portfolio.map((item, i) => {
-    return renderCard(item.ticker, item.qty, item.cost, i, quotes[item.ticker], totalVal);
+    return renderCard(item.id, item.ticker, item.qty, item.cost, i, quotes[item.ticker], totalVal);
   }).join('');
   hydrateIcons(grid);
 
@@ -353,10 +352,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `<div style="width:${Math.max(pct, 5)}%;background:${SECTOR_COLORS[i % SECTOR_COLORS.length]};" data-ticker="${item.ticker}" title="${item.ticker}: ${pct.toFixed(1)}%"></div>`;
   }).join('');
 
-  try {
-    const stats = await apiGet('/api/quote/PETR4/statistics');
-    if (stats.dividend_yield) document.getElementById('avg-dy').textContent = `${(stats.dividend_yield * 100).toFixed(1)}%`;
-  } catch(e) {}
+  // DY Médio: média do dividend_yield de TODOS os ativos da carteira
+  // (antes era hardcoded em PETR4, ignorando os ativos reais do usuário)
+  const dyResults = await Promise.allSettled(
+    portfolio.map(item => apiGet(`/api/quote/${item.ticker}/statistics`).catch(() => null))
+  );
+  const yields = dyResults
+    .map(r => r.status === 'fulfilled' ? r.value : null)
+    .filter(s => s && s.dividend_yield != null && !isNaN(s.dividend_yield))
+    .map(s => s.dividend_yield);
+  if (yields.length > 0) {
+    const avgDy = (yields.reduce((a, b) => a + b, 0) / yields.length) * 100;
+    document.getElementById('avg-dy').textContent = `${avgDy.toFixed(1)}%`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  token = requireAuth();
+  if (token) carregarTudo();
 });
 
 // Modal
@@ -373,7 +386,7 @@ function fecharModal() {
   document.getElementById('modal-overlay').classList.remove('show');
 }
 
-function confirmarModal() {
+async function confirmarModal() {
   const ticker = document.getElementById('modal-ticker').value.trim().toUpperCase();
   const qtd = parseInt(document.getElementById('modal-qty').value);
   const custo = parseFloat(document.getElementById('modal-cost').value.replace(',','.'));
@@ -382,21 +395,34 @@ function confirmarModal() {
     return;
   }
   fecharModal();
-  const portfolio = getPortfolio();
-  portfolio.push({ ticker, qty: qtd, cost: custo });
-  savePortfolio(portfolio);
-  showToast(`${ticker} adicionado à carteira`, 'success');
-  setTimeout(() => location.reload(), 600);
+  try {
+    const r = await fetch(`/me/portfolio?ticker=${ticker}&quantity=${qtd}&avg_cost=${custo}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      showAlert(err.detail || 'Erro ao adicionar ativo', 'Erro');
+      return;
+    }
+    showToast(`${ticker} adicionado à carteira`, 'success');
+    carregarTudo();
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'Erro');
+  }
 }
 
-function removerAtivo(ticker) {
-  showConfirm(`Remover ${ticker} da carteira?`, 'Excluir', { danger: true }).then(ok => {
+function removerAtivo(positionId, ticker) {
+  showConfirm(`Remover ${ticker} da carteira?`, 'Excluir', { danger: true }).then(async ok => {
     if (!ok) return;
-    let portfolio = getPortfolio();
-    portfolio = portfolio.filter(item => item.ticker !== ticker);
-    savePortfolio(portfolio);
-    showToast(`${ticker} removido da carteira`, 'success');
-    setTimeout(() => location.reload(), 600);
+    try {
+      const r = await fetch(`/me/portfolio/${positionId}`, { method: 'DELETE', headers: authHeaders() });
+      if (!r.ok) { showAlert('Erro ao remover ativo', 'Erro'); return; }
+      showToast(`${ticker} removido da carteira`, 'success');
+      carregarTudo();
+    } catch (e) {
+      showAlert('Erro de conexão: ' + e.message, 'Erro');
+    }
   });
 }
 </script>
