@@ -172,3 +172,89 @@ async def test_get_me_invalid_token(async_client: AsyncClient) -> None:
         "/auth/me", headers={"Authorization": "Bearer token_invalido_aqui"}
     )
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_profile(async_client: AsyncClient, unique_email: str) -> None:
+    """Verifica atualização do nome do usuário."""
+    reg = await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Nome Antigo",
+            "email": unique_email,
+            "password": "senha_segura_123",
+        },
+    )
+    token = reg.json()["access_token"]
+
+    response = await async_client.patch(
+        "/auth/me",
+        json={"name": "Nome Novo"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "Nome Novo"
+
+    me = await async_client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert me.json()["name"] == "Nome Novo"
+
+
+@pytest.mark.asyncio
+async def test_update_profile_unauthorized(async_client: AsyncClient) -> None:
+    response = await async_client.patch("/auth/me", json={"name": "X"})
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_change_password(async_client: AsyncClient, unique_email: str) -> None:
+    """Verifica troca de senha e que a nova senha passa a funcionar no login."""
+    reg = await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Troca Senha",
+            "email": unique_email,
+            "password": "senha_antiga_123",
+        },
+    )
+    token = reg.json()["access_token"]
+
+    response = await async_client.post(
+        "/auth/change-password",
+        json={
+            "current_password": "senha_antiga_123",
+            "new_password": "senha_nova_456",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    login = await async_client.post(
+        "/auth/login",
+        json={"email": unique_email, "password": "senha_nova_456"},
+    )
+    assert login.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_current(
+    async_client: AsyncClient, unique_email: str
+) -> None:
+    """Verifica que senha atual incorreta é rejeitada."""
+    reg = await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Senha Errada",
+            "email": unique_email,
+            "password": "senha_certa_123",
+        },
+    )
+    token = reg.json()["access_token"]
+
+    response = await async_client.post(
+        "/auth/change-password",
+        json={"current_password": "senha_errada", "new_password": "nova_senha_999"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400

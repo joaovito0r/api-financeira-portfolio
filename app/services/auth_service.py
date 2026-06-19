@@ -129,3 +129,59 @@ class AuthService:
                 "email": user.email,
                 "created_at": user.created_at.isoformat(),
             }
+
+    async def update_profile(self, user_id: str, name: str) -> dict[str, Any]:
+        """Atualiza o nome do usuário.
+
+        Args:
+            user_id: UUID do usuário.
+            name: Novo nome.
+
+        Returns:
+            Dict com os dados atualizados do usuário.
+
+        Raises:
+            ValueError: Se o usuário não existir.
+        """
+        async with get_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.id == user_id)
+            )
+            user = result.scalars().first()
+            if not user:
+                raise ValueError("Usuário não encontrado")
+
+            user.name = name
+            await session.commit()
+            return {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "created_at": user.created_at.isoformat(),
+            }
+
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str
+    ) -> None:
+        """Troca a senha do usuário, validando a senha atual.
+
+        Args:
+            user_id: UUID do usuário.
+            current_password: Senha atual em texto puro.
+            new_password: Nova senha em texto puro.
+
+        Raises:
+            ValueError: Se o usuário não existir ou a senha atual estiver errada.
+        """
+        async with get_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.id == user_id)
+            )
+            user = result.scalars().first()
+            if not user:
+                raise ValueError("Usuário não encontrado")
+            if not verify_password(current_password, user.password_hash):
+                raise ValueError("Senha atual incorreta")
+
+            user.password_hash = hash_password(new_password)
+            await session.commit()

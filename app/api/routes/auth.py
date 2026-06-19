@@ -11,7 +11,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_auth_service, rate_limit_login, rate_limit_user
-from app.schemas.auth import TokenResponse, UserCreate, UserLogin, UserResponse
+from app.schemas.auth import (
+    PasswordChange,
+    TokenResponse,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    UserUpdate,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
@@ -68,3 +75,41 @@ async def get_me(
 ) -> dict[str, Any]:
     """Dados do usuário autenticado."""
     return current_user
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    summary="Atualizar perfil",
+    description="Atualiza o nome do usuário logado.",
+)
+async def update_me(
+    body: UserUpdate,
+    current_user: dict[str, Any] = Depends(rate_limit_user),
+    service: AuthService = Depends(get_auth_service),
+) -> dict[str, Any]:
+    """Atualiza dados do usuário autenticado."""
+    try:
+        return await service.update_profile(current_user["id"], body.name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.post(
+    "/change-password",
+    summary="Trocar senha",
+    description="Troca a senha do usuário logado, validando a senha atual.",
+)
+async def change_password(
+    body: PasswordChange,
+    current_user: dict[str, Any] = Depends(rate_limit_user),
+    service: AuthService = Depends(get_auth_service),
+) -> dict[str, str]:
+    """Troca a senha do usuário autenticado."""
+    try:
+        await service.change_password(
+            current_user["id"], body.current_password, body.new_password
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"detail": "Senha alterada com sucesso"}

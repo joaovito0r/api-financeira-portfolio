@@ -26,6 +26,24 @@ class UserLogin(BaseModel):
     password: str = Field(..., description="Senha")
 
 
+class UserUpdate(BaseModel):
+    """Schema de atualização de perfil."""
+
+    name: str = Field(..., min_length=2, max_length=100, description="Novo nome")
+
+
+class PasswordChange(BaseModel):
+    """Schema de troca de senha."""
+
+    current_password: str = Field(..., description="Senha atual")
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Nova senha (mínimo 8 caracteres)",
+    )
+
+
 class UserResponse(BaseModel):
     """Resposta com dados do usuário (sem senha)."""
 
