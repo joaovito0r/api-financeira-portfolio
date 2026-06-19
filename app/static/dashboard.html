@@ -113,12 +113,11 @@
 <script src="/static/api.js?v=2"></script>
 <script>
 // ─── Configuração ───────────────────────────────────────────────────────────
-const STORAGE_KEY = 'financeiro_carteira';
 const DEFAULT_TICKERS = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
 const INDEX_PROXY = 'BOVA11'; // ETF que replica o Ibovespa
 
 let selectedTicker = 'PETR4';
-let portfolioCache = null;
+let portfolioCache = undefined; // undefined = ainda não buscou; null = visitante sem login; [] = logado sem posições
 
 // ─── Boot: renderiza skeletons imediatamente ───────────────────────────────
 document.getElementById('cards-container').innerHTML =
@@ -137,13 +136,17 @@ document.getElementById('table-help-legend').innerHTML = helpLegend('legend-box'
   'Tendência (30d)': 'mini gráfico dos últimos 30 dias de negociação.',
 }, 'O que significam as colunas?');
 
-// ─── Carrega carteira do localStorage (helper) ─────────────────────────────
-function getPortfolio() {
-  if (portfolioCache) return portfolioCache;
+// ─── Carrega carteira do backend (helper) ──────────────────────────────────
+async function getPortfolio() {
+  if (portfolioCache !== undefined) return portfolioCache;
+  const token = getToken();
+  if (!token) { portfolioCache = null; return null; } // null = visitante não logado
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    portfolioCache = raw ? JSON.parse(raw) : DEFAULT_TICKERS.map(t => ({ ticker: t, qty: 100, cost: 30 }));
-  } catch(e) {
+    const r = await fetch('/me/portfolio', { headers: authHeaders() });
+    if (!r.ok) { portfolioCache = []; return portfolioCache; }
+    const data = await r.json();
+    portfolioCache = data.positions.map(p => ({ ticker: p.ticker, qty: p.quantity, cost: p.avg_cost }));
+  } catch (e) {
     portfolioCache = [];
   }
   return portfolioCache;
@@ -165,9 +168,10 @@ async function fetchAllStatistics(tickers) {
 async function carregarCards(statistics) {
   const container = document.getElementById('cards-container');
 
+  const portfolio = await getPortfolio();
   const [idxQ, portfolioStats] = await Promise.allSettled([
     apiGet(`/api/quote/${INDEX_PROXY}`).catch(() => null),
-    computePortfolioStats(),
+    portfolio && portfolio.length > 0 ? computePortfolioStats(portfolio) : Promise.resolve(null),
   ]);
 
   const idx = idxQ.status === 'fulfilled' ? idxQ.value : null;
@@ -188,7 +192,7 @@ async function carregarCards(statistics) {
     container.insertAdjacentHTML('beforeend', cardErrorHTML('IBOVESPA', 'trendingUp'));
   }
 
-  // Card 2: Carteira
+  // Card 2: Carteira (3 estados: não logado / vazia / com posições)
   if (ps && ps.totalShares > 0) {
     container.insertAdjacentHTML('beforeend', cardHTML({
       iconName: 'wallet',
@@ -197,6 +201,8 @@ async function carregarCards(statistics) {
       sub: `${ps.positionCount} ativos · ${ps.totalShares.toLocaleString('pt-BR')} ações`,
       change: ps.totalPct,
     }));
+  } else if (portfolio === null) {
+    container.insertAdjacentHTML('beforeend', cardLoginHTML('Carteira', 'wallet'));
   } else {
     container.insertAdjacentHTML('beforeend', cardErrorHTML('Carteira', 'wallet'));
   }
@@ -256,6 +262,15 @@ function cardErrorHTML(label, iconName) {
   </div>`;
 }
 
+function cardLoginHTML(label, iconName) {
+  return `<div class="card" style="cursor:pointer;" onclick="window.location='/static/login.html'" role="button" tabindex="0">
+    <div class="card-icon">${icon(iconName, { size: 18 })}</div>
+    <div class="card-label">${escapeHtml(label)}</div>
+    <div class="card-value" style="color:var(--brand-hover);font-size:15px;">Entrar</div>
+    <div class="card-sub">Faça login para ver sua carteira</div>
+  </div>`;
+}
+
 async function carregarDestaque(ticker) {
   try {
     const q = await apiGet(`/api/quote/${ticker}`);
@@ -278,8 +293,7 @@ async function carregarDestaque(ticker) {
 }
 
 // ─── Stats da carteira ─────────────────────────────────────────────────────
-async function computePortfolioStats() {
-  const portfolio = getPortfolio();
+async function computePortfolioStats(portfolio) {
   if (!portfolio || portfolio.length === 0) return null;
 
   const quotes = await Promise.all(portfolio.map(p =>
@@ -363,9 +377,18 @@ const SECTOR_COLORS = {
 
 // ─── Distribuição da carteira (por setor) ──────────────────────────────────
 async function carregarDistribuicao() {
-  const ps = await computePortfolioStats().catch(() => null);
   const body = document.getElementById('alloc-body');
   const sub = document.getElementById('alloc-sub');
+  const portfolio = await getPortfolio();
+
+  if (portfolio === null) {
+    sub.textContent = 'Faça login para ver a distribuição da sua carteira';
+    body.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span><a href="/static/login.html" style="color:var(--brand-hover);">Faça login</a> para acompanhar sua carteira</span></div>`;
+    hydrateIcons(body);
+    return;
+  }
+
+  const ps = portfolio.length > 0 ? await computePortfolioStats(portfolio).catch(() => null) : null;
 
   if (!ps || ps.totalValue <= 0) {
     sub.textContent = 'Adicione ativos à carteira para ver a distribuição';
