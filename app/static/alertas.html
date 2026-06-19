@@ -162,7 +162,7 @@
 <script src="/static/icons.js"></script>
 <script src="/static/api.js"></script>
 <script>
-let token = localStorage.getItem('token');
+let token = null;
 
 async function carregarAlertas() {
   const list = document.getElementById('alerts-list');
@@ -227,10 +227,15 @@ async function criarAlerta() {
   if (!ticker || !target) { showAlert('Preencha ticker e preço', 'Atenção'); return; }
 
   try {
-    await fetch(`/me/alerts?ticker=${ticker}&target_price=${target}&direction=${direction}`, {
+    const r = await fetch(`/me/alerts?ticker=${ticker}&target_price=${target}&direction=${direction}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      showAlert(err.detail || 'Erro ao criar alerta', 'Erro');
+      return;
+    }
     document.getElementById('new-ticker').value = '';
     document.getElementById('new-target').value = '';
     showToast('Alerta criado', 'success');
@@ -268,23 +273,10 @@ async function verificarTodos(btn) {
   btn.disabled = false;
 }
 
-async function autoLogin() {
-  try {
-    const r = await fetch('/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'test@test.com', password: '12345678' })
-    });
-    if (r.ok) {
-      const d = await r.json();
-      token = d.access_token;
-      localStorage.setItem('token', token);
-    }
-  } catch(e) {}
-  carregarAlertas();
-}
-
-document.addEventListener('DOMContentLoaded', autoLogin);
+document.addEventListener('DOMContentLoaded', () => {
+  token = requireAuth();
+  if (token) carregarAlertas();
+});
 </script>
 </body>
 </html>
