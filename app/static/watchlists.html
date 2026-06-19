@@ -194,27 +194,9 @@
 <script src="/static/icons.js"></script>
 <script src="/static/api.js"></script>
 <script>
-let token = localStorage.getItem('token');
+let token = null;
 let currentWlId = null;
 let wlData = [];
-
-async function autoLogin() {
-  if (!token) {
-    try {
-      const r = await fetch('/auth/login', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({email:'test@test.com', password:'12345678'})
-      });
-      if (r.ok) { const d = await r.json(); token = d.access_token; localStorage.setItem('token', token); }
-    } catch(e) {}
-  }
-  if (token) carregarTudo();
-  else {
-    const area = document.getElementById('items-area');
-    area.innerHTML = `<div class="loading-state"><span data-icon="lock" data-icon-size="16"></span><span>Faça login para acessar suas watchlists</span></div>`;
-    hydrateIcons(area);
-  }
-}
 
 async function carregarTudo() {
   const area = document.getElementById('items-area');
@@ -367,7 +349,10 @@ document.getElementById('leg-wl-container').innerHTML = helpLegend('leg-wl', {
   'DY': 'Dividend Yield. Retorno anual em dividendos sobre o preço atual.',
 });
 
-document.addEventListener('DOMContentLoaded', autoLogin);
+document.addEventListener('DOMContentLoaded', () => {
+  token = requireAuth();
+  if (token) carregarTudo();
+});
 </script>
 </body>
 </html>
