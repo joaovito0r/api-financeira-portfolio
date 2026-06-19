@@ -305,31 +305,29 @@ if (document.readyState === 'loading') {
   initSidebar();
 }
 
-// ── Theme toggle (light/dark) ──────────────────────────────────────────────
+// ── Autenticação ─────────────────────────────────────────────────────────
 
-function currentTheme() {
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+function getToken() {
+  return localStorage.getItem('token');
 }
 
-function applyTheme(theme) {
-  if (theme === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-  } else {
-    document.documentElement.removeAttribute('data-theme');
+/**
+ * Garante que existe um token; se não houver, redireciona para o login
+ * preservando a página atual em ?redirect= para voltar depois.
+ * @returns {string|null} o token, ou null (e já disparou o redirect)
+ */
+function requireAuth() {
+  const token = getToken();
+  if (!token) {
+    const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/static/login.html?redirect=${redirect}`;
+    return null;
   }
-  try { localStorage.setItem('financeiro_theme', theme); } catch(e) {}
-  // Atualiza o ícone do botão (se existir)
-  const btn = document.getElementById('theme-toggle');
-  if (btn) {
-    btn.innerHTML = theme === 'light'
-      ? icon('refresh', { size: 14 }) // placeholder, vai ser re-hidratado
-      : icon('refresh', { size: 14 });
-    hydrateIcons(btn);
-  }
+  return token;
 }
 
-function toggleTheme() {
-  applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+function authHeaders() {
+  return { 'Authorization': `Bearer ${getToken()}` };
 }
 
 // ── Help Legend (legenda de abreviações) ────────────────────────────────────
