@@ -4,20 +4,32 @@ Fixtures compartilhadas para os testes.
 
 from __future__ import annotations
 
+import contextlib
+import os
+import tempfile
 from collections.abc import AsyncGenerator
 
-import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+# Isola o banco de testes do banco de dev (data/financeira.db): precisa ser
+# definido antes de qualquer import de app.*, porque o engine é criado no
+# nível de módulo em app/repositories/local/models.py, no momento do import.
+_TEST_DB_FD, _TEST_DB_PATH = tempfile.mkstemp(
+    suffix=".db", prefix="financeira_test_"
+)
+os.close(_TEST_DB_FD)
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_TEST_DB_PATH}"
 
-from app.config import settings
-from app.main import app
-from app.repositories.local.models import init_db
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+
+from app.config import settings  # noqa: E402
+from app.main import app  # noqa: E402
+from app.repositories.local.models import engine, init_db  # noqa: E402
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_app() -> AsyncGenerator[None, None]:
-    """Inicializa banco e sobrescreve cliente brapi com mock para testes."""
+    """Inicializa banco isolado e sobrescreve cliente brapi com mock para testes."""
     await init_db()
     # Desliga rate limiting por padrão: evita que a suíte (várias chamadas
     # seguidas às rotas de watchlist/alert) estoure os baldes globais.
@@ -42,6 +54,10 @@ async def setup_app() -> AsyncGenerator[None, None]:
     app.state.brapi_client = mock
     yield
     await app.state.brapi_client.close()
+    await engine.dispose()
+    for suffix in ("", "-wal", "-shm", "-journal"):
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(_TEST_DB_PATH + suffix)
 
 
 @pytest.fixture
