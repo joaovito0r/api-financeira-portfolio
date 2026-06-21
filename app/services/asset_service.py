@@ -51,8 +51,8 @@ class AssetService:
         if cached is not None:
             return cached  # type: ignore[no-any-return]
         raw = await self._brapi.available()
-        symbols = raw.get("symbols", [])
-        result = [
-            {"ticker": s.get("symbol", ""), "name": s.get("name", "")} for s in symbols
-        ]
+        # A brapi devolve {"stocks": [<ticker str>, ...]} aqui — apenas tickers,
+        # sem nome (diferente de /api/quote/list, que devolve objetos completos).
+        tickers = raw.get("stocks", [])
+        result = [{"ticker": t} for t in tickers]
         return await self._cache.save(key, result, ASSET_LIST_CACHE)  # type: ignore[no-any-return]
