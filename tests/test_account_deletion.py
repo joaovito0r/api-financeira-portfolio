@@ -128,3 +128,32 @@ async def test_request_deletion_twice_does_not_reset_clock() -> None:
 
     with pytest.raises(ValueError, match="já está marcada"):
         await service.request_deletion(user_id, "senha_correta_123")
+
+
+@pytest.mark.asyncio
+async def test_token_rejected_after_deletion(
+    async_client: AsyncClient, unique_email: str
+) -> None:
+    """Token emitido antes da exclusão deixa de funcionar em rotas autenticadas."""
+    reg = await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Bloqueio",
+            "email": unique_email,
+            "password": "senha_correta_123",
+        },
+    )
+    token = reg.json()["access_token"]
+
+    delete_resp = await async_client.request(
+        "DELETE",
+        "/auth/me",
+        json={"password": "senha_correta_123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_resp.status_code == 200
+
+    me = await async_client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert me.status_code == 401

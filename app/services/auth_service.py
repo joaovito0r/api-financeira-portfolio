@@ -125,6 +125,10 @@ class AuthService:
             user = result.scalars().first()
             if not user:
                 raise ValueError("Usuário não encontrado")
+            if user.deleted_at is not None:
+                raise ValueError(
+                    "Conta desativada. Faça login novamente para reativá-la."
+                )
 
             return {
                 "id": user.id,
