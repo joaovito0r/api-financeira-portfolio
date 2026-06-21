@@ -60,6 +60,7 @@ class AuthService:
             return {
                 "access_token": token,
                 "token_type": "bearer",
+                "reactivated": False,
                 "user": {
                     "id": user.id,
                     "name": user.name,
@@ -90,10 +91,16 @@ class AuthService:
             if not user or not verify_password(password, user.password_hash):
                 raise ValueError("Email ou senha incorretos")
 
+            reactivated = user.deleted_at is not None
+            if reactivated:
+                user.deleted_at = None
+                await session.commit()
+
             token = create_access_token(user.id)
             return {
                 "access_token": token,
                 "token_type": "bearer",
+                "reactivated": reactivated,
                 "user": {
                     "id": user.id,
                     "name": user.name,

@@ -157,3 +157,69 @@ async def test_token_rejected_after_deletion(
         "/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_reactivates_account(
+    async_client: AsyncClient, unique_email: str
+) -> None:
+    """Login com sucesso dentro da janela reativa a conta automaticamente."""
+    reg = await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Reativa",
+            "email": unique_email,
+            "password": "senha_correta_123",
+        },
+    )
+    token = reg.json()["access_token"]
+
+    await async_client.request(
+        "DELETE",
+        "/auth/me",
+        json={"password": "senha_correta_123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    login = await async_client.post(
+        "/auth/login",
+        json={"email": unique_email, "password": "senha_correta_123"},
+    )
+    assert login.status_code == 200
+    data = login.json()
+    assert data["reactivated"] is True
+    new_token = data["access_token"]
+
+    me = await async_client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {new_token}"}
+    )
+    assert me.status_code == 200
+
+    async with get_session() as session:
+        result = await session.execute(
+            select(UserModel).where(UserModel.email == unique_email.lower())
+        )
+        user = result.scalars().first()
+    assert user is not None
+    assert user.deleted_at is None
+
+
+@pytest.mark.asyncio
+async def test_login_normal_has_no_reactivated_flag(
+    async_client: AsyncClient, unique_email: str
+) -> None:
+    """Login normal (conta nunca excluída) não deve trazer reactivated=True."""
+    await async_client.post(
+        "/auth/register",
+        json={
+            "name": "Normal",
+            "email": unique_email,
+            "password": "senha_correta_123",
+        },
+    )
+    login = await async_client.post(
+        "/auth/login",
+        json={"email": unique_email, "password": "senha_correta_123"},
+    )
+    assert login.status_code == 200
+    assert login.json()["reactivated"] is False

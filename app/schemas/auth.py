@@ -65,6 +65,10 @@ class TokenResponse(BaseModel):
     access_token: str = Field(..., description="Token JWT")
     token_type: str = Field("bearer", description="Tipo do token")
     user: UserResponse = Field(..., description="Dados do usuário")
+    reactivated: bool = Field(
+        False,
+        description="True se este login reativou uma conta marcada para exclusão",
+    )
 
 
 class ErrorResponse(BaseModel):
