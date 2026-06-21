@@ -32,6 +32,7 @@ from app.api.routes import (
     watchlists,
 )
 from app.config import settings
+from app.core.account_purge import purge_expired_accounts_loop
 from app.core.exceptions import RateLimitError
 from app.core.migrations import run_migrations
 from app.core.warm_cache import warm_cache_loop
@@ -51,13 +52,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         warm_task = asyncio.create_task(warm_cache_loop(app))
         app.state.warm_cache_task = warm_task
 
+    purge_task = asyncio.create_task(purge_expired_accounts_loop())
+    app.state.account_purge_task = purge_task
+
     yield
 
-    # Shutdown: cancela a task de cache quente e fecha conexões
+    # Shutdown: cancela as tasks de background e fecha conexões
     if warm_task is not None:
         warm_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await warm_task
+    purge_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await purge_task
     await app.state.brapi_client.close()
 
 
