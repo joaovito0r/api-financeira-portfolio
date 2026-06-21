@@ -44,7 +44,7 @@ async def list_assets(
 @router.get(
     "/available",
     summary="Lista simplificada de ativos",
-    description="Versão leve da lista de ativos (apenas ticker, sem dados adicionais).",
+    description="Versão leve da lista de ativos (ticker + nome da empresa).",
     dependencies=[Depends(rate_limit_data)],
 )
 async def available(

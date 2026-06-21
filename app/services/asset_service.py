@@ -53,6 +53,9 @@ class AssetService:
         raw = await self._brapi.available()
         # A brapi devolve {"stocks": [<ticker str>, ...]} aqui — apenas tickers,
         # sem nome (diferente de /api/quote/list, que devolve objetos completos).
+        # O nome é buscado via list_assets() (cache-first, mesma fonte de /api/assets).
         tickers = raw.get("stocks", [])
-        result = [{"ticker": t} for t in tickers]
+        full_list = await self.list_assets()
+        names = {a["ticker"]: a["name"] for a in full_list}
+        result = [{"ticker": t, "name": names.get(t, "")} for t in tickers]
         return await self._cache.save(key, result, ASSET_LIST_CACHE)  # type: ignore[no-any-return]
