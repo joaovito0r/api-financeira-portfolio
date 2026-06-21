@@ -30,8 +30,8 @@ class HistoricalService:
         interval: str = "1d",
     ) -> list[dict[str, Any]]:
         """Busca histórico OHLCV com cache."""
-        # 1. Tenta cache local
-        cached = await self._local.get(ticker)
+        # 1. Tenta cache local (chave: ticker+range+interval)
+        cached = await self._local.get(ticker, range, interval)
         if cached:
             return cached
 
@@ -43,4 +43,4 @@ class HistoricalService:
             return []
 
         # 3. Salva no cache
-        return await self._local.save(ticker, raw_history)
+        return await self._local.save(ticker, range, interval, raw_history)

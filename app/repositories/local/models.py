@@ -78,6 +78,10 @@ class OHLCVModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(20), index=True)
+    range: Mapped[str] = mapped_column(String(10), default="1y", server_default="1y")
+    interval: Mapped[str] = mapped_column(
+        String(10), default="1d", server_default="1d"
+    )
     date: Mapped[datetime.date] = mapped_column(Date)
     open: Mapped[float] = mapped_column(Float)
     high: Mapped[float] = mapped_column(Float)

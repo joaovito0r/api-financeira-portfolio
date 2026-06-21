@@ -21,12 +21,22 @@ class LocalOHLCVRepository:
     def __init__(self) -> None:
         self._cache_policy = OHLCV_CACHE
 
-    async def get(self, ticker: str) -> list[dict[str, Any]] | None:
-        """Busca histórico OHLCV de um ativo no cache local."""
+    async def get(
+        self, ticker: str, range: str, interval: str
+    ) -> list[dict[str, Any]] | None:
+        """Busca histórico OHLCV de um ativo no cache local.
+
+        O cache é por ticker+range+interval: combinações diferentes desses
+        filtros descrevem séries de dados diferentes (ex.: 5d/1d não é um
+        subconjunto óbvio de 5y/1mo), então cada combinação tem sua própria
+        entrada — não basta existir cache para o ticker.
+        """
         async with get_session() as session:
             result = await session.execute(
                 select(OHLCVModel)
                 .where(OHLCVModel.ticker == ticker.upper())
+                .where(OHLCVModel.range == range)
+                .where(OHLCVModel.interval == interval)
                 .order_by(OHLCVModel.date)
             )
             records = result.scalars().all()
@@ -48,9 +58,9 @@ class LocalOHLCVRepository:
             ]
 
     async def save(
-        self, ticker: str, history: list[dict[str, Any]]
+        self, ticker: str, range: str, interval: str, history: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Salva histórico OHLCV no cache local."""
+        """Salva histórico OHLCV no cache local, sob a chave ticker+range+interval."""
         async with get_session() as session:
             saved = []
             for item in history:
@@ -64,6 +74,8 @@ class LocalOHLCVRepository:
 
                 model = OHLCVModel(
                     ticker=ticker.upper(),
+                    range=range,
+                    interval=interval,
                     date=item_date,
                     open=item.get("open", 0),
                     high=item.get("high", 0),
