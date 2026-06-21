@@ -232,7 +232,7 @@ function showConfirm(msg, btnText = 'Confirmar', opts = {}) {
   return new Promise((resolve) => { _modalState.cb = resolve; });
 }
 
-function showPrompt(title, placeholder = '', defaultValue = '') {
+function showPrompt(title, placeholder = '', defaultValue = '', type = 'text') {
   _buildModalContainer();
   const titleEl = document.getElementById('hermes-modal-title');
   const msgEl   = document.getElementById('hermes-modal-msg');
@@ -241,7 +241,7 @@ function showPrompt(title, placeholder = '', defaultValue = '') {
 
   titleEl.innerHTML = title;
   msgEl.innerHTML = '&nbsp;';
-  bodyEl.innerHTML = `<input id="hermes-prompt-input" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" autofocus>`;
+  bodyEl.innerHTML = `<input id="hermes-prompt-input" type="${escapeHtml(type)}" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" autofocus>`;
   actEl.innerHTML = '';
 
   const cancelBtn = document.createElement('button');

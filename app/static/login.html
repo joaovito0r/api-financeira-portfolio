@@ -150,6 +150,11 @@ async function doLogin() {
     const data = await resp.json();
     if (!resp.ok) { showAuthError(data.detail || 'Email ou senha incorretos'); return; }
     localStorage.setItem('token', data.access_token);
+    if (data.reactivated) {
+      showToast('Sua conta foi reativada com sucesso!', 'success');
+      setTimeout(redirectAfterAuth, 1200);
+      return;
+    }
     redirectAfterAuth();
   } catch (e) {
     showAuthError('Erro de conexão. Tente novamente.');
