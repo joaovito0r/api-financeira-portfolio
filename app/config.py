@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     warm_cache_interval_sec: int = 900  # 15 min
     warm_cache_max_tickers: int = 25  # N/T ≤ 1,7 com T=15min
 
+    # Exclusão de conta (soft delete com janela de recuperação)
+    account_deletion_grace_days: int = 30
+
     # Segurança
     secret_key: str = ""
 
