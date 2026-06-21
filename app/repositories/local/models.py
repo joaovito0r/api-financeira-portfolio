@@ -140,9 +140,11 @@ class UserModel(Base):
     watchlists: Mapped[list[WatchlistModel]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    alerts: Mapped[list[AlertModel]] = relationship(cascade="all, delete-orphan")
+    alerts: Mapped[list[AlertModel]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     portfolio_positions: Mapped[list[PortfolioPositionModel]] = relationship(
-        cascade="all, delete-orphan"
+        back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -217,7 +219,7 @@ class AlertModel(Base):
     )
 
     # Relacionamentos
-    user: Mapped[UserModel] = relationship(overlaps="alerts")
+    user: Mapped[UserModel] = relationship(back_populates="alerts")
 
 
 class PortfolioPositionModel(Base):
@@ -239,7 +241,7 @@ class PortfolioPositionModel(Base):
     )
 
     # Relacionamentos
-    user: Mapped[UserModel] = relationship(overlaps="portfolio_positions")
+    user: Mapped[UserModel] = relationship(back_populates="portfolio_positions")
 
 
 # ── Engine async ─────────────────────────────────────────
