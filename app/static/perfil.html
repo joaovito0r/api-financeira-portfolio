@@ -144,7 +144,7 @@ async function carregarPerfil() {
     }
     const user = await resp.json();
 
-    let wlCount = 0, alCount = 0;
+    let wlCount = 0, alCount = 0, carteiraValor = '-';
     try {
       const wl = await fetch('/me/watchlists', {headers: {'Authorization': `Bearer ${token}`}});
       if (wl.ok) { const wd = await wl.json(); wlCount = wd.total; }
@@ -152,6 +152,25 @@ async function carregarPerfil() {
     try {
       const al = await fetch('/me/alerts', {headers: {'Authorization': `Bearer ${token}`}});
       if (al.ok) { const ad = await al.json(); alCount = ad.total; }
+    } catch(e) {}
+    try {
+      const pf = await fetch('/me/portfolio', {headers: {'Authorization': `Bearer ${token}`}});
+      if (pf.ok) {
+        const pd = await pf.json();
+        const positions = pd.positions || [];
+        if (positions.length > 0) {
+          const quotes = await Promise.all(positions.map(p =>
+            apiGet(`/api/quote/${p.ticker}`).catch(() => null)
+          ));
+          const totalValue = positions.reduce((sum, p, i) => {
+            const q = quotes[i];
+            return sum + (q && q.price != null ? q.price * p.quantity : 0);
+          }, 0);
+          carteiraValor = formatMoney(totalValue);
+        } else {
+          carteiraValor = formatMoney(0);
+        }
+      }
     } catch(e) {}
 
     const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
@@ -176,7 +195,7 @@ async function carregarPerfil() {
       <div class="stats">
         <div class="stat">
           <div class="icon">${icon('wallet', { size: 18 })}</div>
-          <div class="num">-</div>
+          <div class="num small">${escapeHtml(carteiraValor)}</div>
           <div class="l">Carteira</div>
         </div>
         <div class="stat">

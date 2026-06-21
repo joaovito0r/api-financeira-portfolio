@@ -114,7 +114,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ─── Configuração ───────────────────────────────────────────────────────────
-const DEFAULT_TICKERS = ['PETR4', 'VALE3', 'ITUB4', 'BBAS3'];
 const INDEX_PROXY = 'BOVA11'; // ETF que replica o Ibovespa
 
 let selectedTicker = 'PETR4';
@@ -166,7 +165,7 @@ async function fetchAllStatistics(tickers) {
 }
 
 // ─── Cards de indicadores ──────────────────────────────────────────────────
-async function carregarCards(statistics) {
+async function carregarCards() {
   const container = document.getElementById('cards-container');
 
   const portfolio = await getPortfolio();
@@ -213,20 +212,36 @@ async function carregarCards(statistics) {
   if (destaque) container.appendChild(destaque);
   else container.insertAdjacentHTML('beforeend', cardErrorHTML(selectedTicker, 'factory'));
 
-  // Card 4: DY Médio — usa statistics já carregados
-  const yields = statistics
-    .filter(s => s && s.dividend_yield != null && !isNaN(s.dividend_yield))
-    .map(s => s.dividend_yield);
+  // Card 4: DY Médio — ponderado pelo valor investido nos ativos da carteira do usuário
+  if (ps && ps.totalShares > 0) {
+    const portfolioTickers = ps.portfolio.map(p => p.ticker);
+    const portfolioStatistics = await fetchAllStatistics(portfolioTickers);
 
-  if (yields.length > 0) {
-    const avgDy = (yields.reduce((a, b) => a + b, 0) / yields.length) * 100;
-    container.insertAdjacentHTML('beforeend', cardHTML({
-      iconName: 'droplets',
-      label: 'Rendimento Médio de Dividendos',
-      value: `${avgDy.toFixed(1)}%`,
-      sub: 'Média anual dos ativos da carteira',
-      change: null,
-    }));
+    let weightedSum = 0, weightedValue = 0;
+    ps.portfolio.forEach((p, i) => {
+      const stat = portfolioStatistics[i];
+      const q = ps.quotes[i];
+      if (stat && stat.dividend_yield != null && !isNaN(stat.dividend_yield) && q && q.price != null) {
+        const value = q.price * p.qty;
+        weightedSum += stat.dividend_yield * value;
+        weightedValue += value;
+      }
+    });
+
+    if (weightedValue > 0) {
+      const avgDy = (weightedSum / weightedValue) * 100;
+      container.insertAdjacentHTML('beforeend', cardHTML({
+        iconName: 'droplets',
+        label: 'Rendimento Médio de Dividendos',
+        value: `${avgDy.toFixed(1)}%`,
+        sub: 'Média ponderada pelo valor investido na carteira',
+        change: null,
+      }));
+    } else {
+      container.insertAdjacentHTML('beforeend', cardErrorHTML('DY Médio', 'droplets'));
+    }
+  } else if (portfolio === null) {
+    container.insertAdjacentHTML('beforeend', cardLoginHTML('DY Médio', 'droplets'));
   } else {
     container.insertAdjacentHTML('beforeend', cardErrorHTML('DY Médio', 'droplets'));
   }
@@ -815,12 +830,9 @@ async function carregarAlertBar() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAuth()) return; // já redirecionou para o login
 
-  // Busca statistics do DY Médio (card 4), baseado nos tickers de vitrine
-  const statistics = await fetchAllStatistics(DEFAULT_TICKERS);
-
   // Carrega em paralelo
   await Promise.allSettled([
-    carregarCards(statistics),
+    carregarCards(),
     carregarTabela(),
     carregarDistribuicao(),
     renderChart(selectedTicker),
