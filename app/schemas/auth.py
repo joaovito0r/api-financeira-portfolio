@@ -44,6 +44,12 @@ class PasswordChange(BaseModel):
     )
 
 
+class AccountDeletion(BaseModel):
+    """Schema de exclusão (soft delete) da conta."""
+
+    password: str = Field(..., description="Senha atual, para confirmar a exclusão")
+
+
 class UserResponse(BaseModel):
     """Resposta com dados do usuário (sem senha)."""
 
@@ -59,6 +65,10 @@ class TokenResponse(BaseModel):
     access_token: str = Field(..., description="Token JWT")
     token_type: str = Field("bearer", description="Tipo do token")
     user: UserResponse = Field(..., description="Dados do usuário")
+    reactivated: bool = Field(
+        False,
+        description="True se este login reativou uma conta marcada para exclusão",
+    )
 
 
 class ErrorResponse(BaseModel):

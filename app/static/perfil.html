@@ -227,6 +227,10 @@ async function carregarPerfil() {
           <span class="l">${icon('logout', { size: 14 })} Sair da conta</span>
           <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
         </div>
+        <div class="info-row danger-zone">
+          <span class="l">${icon('trash', { size: 14 })} Excluir conta</span>
+          <button class="btn btn-danger btn-sm" onclick="excluirConta()">Excluir</button>
+        </div>
       </div>`;
     hydrateIcons(area);
   } catch(e) {
@@ -285,6 +289,41 @@ async function logout() {
   localStorage.removeItem('token');
   showToast('Desconectado', 'success');
   setTimeout(() => { window.location.href = '/static/login.html'; }, 600);
+}
+
+async function excluirConta() {
+  const ok = await showConfirm(
+    'Sua conta será desativada imediatamente. Se você logar novamente dentro de 30 dias, ela é reativada automaticamente — depois desse prazo, a exclusão é permanente e não pode ser desfeita. Quer continuar?',
+    'Excluir conta',
+    { danger: true }
+  );
+  if (!ok) return;
+
+  const senha = await showPrompt('Confirme sua senha', 'Senha atual', '', 'password');
+  if (!senha) return;
+
+  try {
+    const r = await fetch('/auth/me', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ password: senha }),
+    });
+    const data = await r.json();
+    if (!r.ok) { showAlert(data.detail || 'Não foi possível excluir a conta', 'Erro'); return; }
+
+    const prazo = data.purge_at ? new Date(data.purge_at).toLocaleDateString('pt-BR') : null;
+    localStorage.removeItem('token');
+    showToast(
+      prazo
+        ? `Conta marcada para exclusão. Logue até ${prazo} para reativá-la.`
+        : 'Conta marcada para exclusão.',
+      'success',
+      6000
+    );
+    setTimeout(() => { window.location.href = '/static/login.html'; }, 2000);
+  } catch (e) {
+    showAlert('Erro de conexão: ' + e.message, 'Erro');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', carregarPerfil);

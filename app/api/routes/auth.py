@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_auth_service, rate_limit_login, rate_limit_user
 from app.schemas.auth import (
+    AccountDeletion,
     PasswordChange,
     TokenResponse,
     UserCreate,
@@ -113,3 +114,24 @@ async def change_password(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"detail": "Senha alterada com sucesso"}
+
+
+@router.delete(
+    "/me",
+    summary="Excluir conta",
+    description=(
+        "Marca a conta para exclusão (soft delete). A conta fica desativada "
+        "por um período de recuperação; logar novamente dentro do prazo a "
+        "reativa automaticamente. Depois do prazo, a exclusão é permanente."
+    ),
+)
+async def delete_me(
+    body: AccountDeletion,
+    current_user: dict[str, Any] = Depends(rate_limit_user),
+    service: AuthService = Depends(get_auth_service),
+) -> dict[str, str]:
+    """Solicita a exclusão (soft delete) da conta do usuário autenticado."""
+    try:
+        return await service.request_deletion(current_user["id"], body.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
