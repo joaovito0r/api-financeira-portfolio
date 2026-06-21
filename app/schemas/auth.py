@@ -44,6 +44,12 @@ class PasswordChange(BaseModel):
     )
 
 
+class AccountDeletion(BaseModel):
+    """Schema de exclusão (soft delete) da conta."""
+
+    password: str = Field(..., description="Senha atual, para confirmar a exclusão")
+
+
 class UserResponse(BaseModel):
     """Resposta com dados do usuário (sem senha)."""
 
