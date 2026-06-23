@@ -89,6 +89,21 @@ make dev
 make test
 ```
 
+## Docker
+
+```bash
+# Sobe API + PostgreSQL
+docker compose up --build
+
+# A API aplica as migrations automaticamente no startup
+# http://localhost:8000/docs
+```
+
+O `docker-compose.yml` usa PostgreSQL (via `asyncpg`) em vez do SQLite de
+desenvolvimento local, espelhando a configuração de produção. Variáveis como
+`BRAPI_TOKEN` podem ser passadas via `.env` na raiz do projeto (lido
+automaticamente pelo `docker compose`).
+
 ## Migrations
 
 O schema do banco é versionado com Alembic (`alembic/versions/`). A app
@@ -110,9 +125,12 @@ make migrate-down
 ## Documentação
 
 - `/docs` - OpenAPI (automático pelo FastAPI)
-- `/docs/01-dominio-e-visao.md` - Domínio e entidades
-- `/docs/02-arquitetura.md` - Arquitetura e padrões
-- `/docs/03-tecnologias.md` - Stack e dependências
+- [`docs/01-dominio-e-visao.md`](docs/01-dominio-e-visao.md) - Domínio e entidades
+- [`docs/02-arquitetura.md`](docs/02-arquitetura.md) - Arquitetura e padrões
+- [`docs/03-tecnologias.md`](docs/03-tecnologias.md) - Stack e dependências
+- [`docs/04-migracao-async-e-backlog.md`](docs/04-migracao-async-e-backlog.md) - Migração para SQLAlchemy async
+- [`docs/05-revisao-seguranca.md`](docs/05-revisao-seguranca.md) - Auditoria de segurança (multi-tenancy, SQLi, vazamento de dados)
+- [`docs/06-rate-limit-e-cache.md`](docs/06-rate-limit-e-cache.md) - Rate limiting e estratégia de cache
 
 ## Licença
 
