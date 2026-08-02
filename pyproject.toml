@@ -76,6 +76,14 @@ addopts = "-v --tb=short"
 [tool.coverage.run]
 source = ["app"]
 relative_files = true
+concurrency = ["greenlet"]
+omit = [
+    # Código morto: entidades de domínio e schemas nunca importados em app/
+    # fora de si mesmos (ver docs/ ou histórico do projeto se forem retomados).
+    "app/domain/*",
+    "app/schemas/error.py",
+    "app/schemas/ohlcv.py",
+]
 
 [tool.coverage.report]
 exclude_also = [
