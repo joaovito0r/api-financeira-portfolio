@@ -24,7 +24,9 @@ data/
 
 # Environment
 .env
-.env.prod*
+.env.prod
+.env.prod.*
+!.env.prod.example
 
 # OS
 .DS_Store

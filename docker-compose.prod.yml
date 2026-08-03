@@ -1,3 +1,12 @@
+# Stack de produção deste app. O reverse proxy (Caddy) NÃO mora aqui — é
+# compartilhado entre todos os projetos da VPS, ver /home/joao/portifolio/infra/.
+# Antes de subir esta stack, criar a rede uma vez: docker network create edge
+#
+# "name:" explícito para não colidir com o docker-compose.yml de dev, que
+# mora na mesma pasta — sem isso os dois usariam o mesmo nome de projeto
+# (derivado do diretório) e acabariam compartilhando o volume do Postgres.
+name: financial-api-prod
+
 services:
   db:
     image: postgres:16-alpine
@@ -13,9 +22,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - default
 
   api:
     build: .
+    container_name: financial-api
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://financeira:${POSTGRES_PASSWORD}@db:5432/financeira
@@ -26,27 +38,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    expose:
-      - "8000"
-    # Sem "ports:" aqui de propósito — a API só é alcançável pelo Caddy,
-    # via rede interna do compose, nunca direto pela internet.
+    networks:
+      - default
+      - edge
+    # Sem "ports:" de propósito — só alcançável pelo Caddy compartilhado,
+    # via rede externa "edge", nunca direto pela internet.
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - api
+networks:
+  default:
+  edge:
+    external: true
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
