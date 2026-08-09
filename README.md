@@ -4,6 +4,11 @@ API REST para consulta de dados financeiros do mercado brasileiro (B3),
 consumindo dados da [brapi.dev](https://brapi.dev) com cache inteligente
 e armazenamento local.
 
+## Produção
+
+- **App:** https://financeira.178.105.130.134.nip.io
+- **Docs (Swagger):** https://financeira.178.105.130.134.nip.io/docs
+
 ## Funcionalidades
 
 - Cotação em tempo real de ações, FIIs, ETFs, BDRs
