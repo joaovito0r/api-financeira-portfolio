@@ -860,7 +860,8 @@ tbody tr.active { background: var(--brand-soft); }
   .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0; padding: 60px 16px 20px; }
   .cards { grid-template-columns: 1fr; }
-  .header h1 { font-size: 18px; }
+  .header { flex-wrap: wrap; }
+  .header h1 { font-size: 18px; white-space: nowrap; }
   .search-box { width: 140px; }
   .table-wrap { overflow-x: auto; }
   table { min-width: 600px; }
