@@ -66,6 +66,7 @@ class AuthService:
                     "name": user.name,
                     "email": user.email,
                     "created_at": user.created_at.isoformat(),
+                    "is_demo": user.is_demo,
                 },
             }
 
@@ -106,6 +107,7 @@ class AuthService:
                     "name": user.name,
                     "email": user.email,
                     "created_at": user.created_at.isoformat(),
+                    "is_demo": user.is_demo,
                 },
             }
 
@@ -142,6 +144,7 @@ class AuthService:
                 "name": user.name,
                 "email": user.email,
                 "created_at": user.created_at.isoformat(),
+                "is_demo": user.is_demo,
             }
 
     async def update_profile(self, user_id: str, name: str) -> dict[str, Any]:
@@ -172,6 +175,7 @@ class AuthService:
                 "name": user.name,
                 "email": user.email,
                 "created_at": user.created_at.isoformat(),
+                "is_demo": user.is_demo,
             }
 
     async def request_deletion(self, user_id: str, password: str) -> dict[str, Any]:
@@ -200,6 +204,10 @@ class AuthService:
             user = result.scalars().first()
             if not user:
                 raise ValueError("Usuário não encontrado")
+            if user.is_demo:
+                raise ValueError(
+                    "Esta é a conta demo pública; ela não pode ser excluída."
+                )
             if user.deleted_at is not None:
                 raise ValueError("Conta já está marcada para exclusão")
             if not verify_password(password, user.password_hash):
@@ -239,6 +247,10 @@ class AuthService:
             user = result.scalars().first()
             if not user:
                 raise ValueError("Usuário não encontrado")
+            if user.is_demo:
+                raise ValueError(
+                    "Esta é a conta demo pública; a senha não pode ser alterada."
+                )
             if not verify_password(current_password, user.password_hash):
                 raise ValueError("Senha atual incorreta")
 

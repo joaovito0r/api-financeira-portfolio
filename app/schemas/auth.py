@@ -57,6 +57,13 @@ class UserResponse(BaseModel):
     name: str = Field(..., description="Nome")
     email: str = Field(..., description="Email")
     created_at: datetime = Field(..., description="Data de criação")
+    is_demo: bool = Field(
+        False,
+        description=(
+            "True para a conta demo pública; senha e exclusão são bloqueadas "
+            "e os dados são restaurados periodicamente"
+        ),
+    )
 
 
 class TokenResponse(BaseModel):

@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     # Exclusão de conta (soft delete com janela de recuperação)
     account_deletion_grace_days: int = 30
 
+    # Conta demo (para recrutadores/visitantes explorarem sem cadastro)
+    demo_account_enabled: bool = True
+    demo_account_email: str = "demo@financias.app"
+    demo_account_password: str = "Financias@Demo2026!"
+    demo_reset_interval_sec: int = 300  # 5 minutos
+
     # Segurança
     secret_key: str = ""
 

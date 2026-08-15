@@ -73,6 +73,39 @@
       font-size: 12px; color: var(--danger); margin-bottom: 12px; min-height: 16px;
     }
     .auth-submit { width: 100%; justify-content: center; margin-top: 4px; }
+    .demo-box {
+      width: 100%;
+      max-width: 380px;
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .demo-box .demo-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+    }
+    .demo-box .demo-creds {
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      word-break: break-all;
+    }
+    .demo-box .demo-note {
+      font-size: 11px;
+      color: var(--text-sec);
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -115,6 +148,13 @@
     </div>
     <button class="btn btn-primary auth-submit" type="submit">Criar conta</button>
   </form>
+</div>
+
+<div class="demo-box">
+  <div class="demo-title">Só quer explorar? Use a conta demo</div>
+  <div class="demo-creds">demo@financias.app · Financias@Demo2026!</div>
+  <button class="btn btn-outline auth-submit" type="button" onclick="entrarComoDemo()">Entrar como visitante</button>
+  <div class="demo-note">Os dados dessa conta (carteira, listas, alertas) são restaurados automaticamente a cada 5 minutos.</div>
 </div>
 
 <script src="/static/icons.js"></script>
@@ -160,6 +200,13 @@ async function doLogin() {
   } catch (e) {
     showAuthError('Erro de conexão. Tente novamente.');
   }
+}
+
+async function entrarComoDemo() {
+  document.getElementById('login-email').value = 'demo@financias.app';
+  document.getElementById('login-password').value = 'Financias@Demo2026!';
+  switchTab('login');
+  await doLogin();
 }
 
 async function doRegister() {

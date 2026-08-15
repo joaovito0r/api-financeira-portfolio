@@ -139,6 +139,7 @@ class UserModel(Base):
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime, nullable=True
     )
+    is_demo: Mapped[bool] = mapped_column(default=False, server_default="0")
 
     # Relacionamentos
     watchlists: Mapped[list[WatchlistModel]] = relationship(
