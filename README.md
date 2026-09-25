@@ -4,10 +4,15 @@ API REST para consulta de dados financeiros do mercado brasileiro (B3),
 consumindo dados da [brapi.dev](https://brapi.dev) com cache inteligente
 e armazenamento local.
 
-## Produção
+## Deploy
 
-- **App:** https://financeira.178.105.130.134.nip.io
-- **Docs (Swagger):** https://financeira.178.105.130.134.nip.io/docs
+O projeto ficou publicado num deploy de demonstração numa VPS, que sai do ar na
+reorganização do portfólio. O que estava lá está registrado na seção
+[Prints](#prints). Para rodar localmente, o [Quick Start](#quick-start) sobe a
+API com o Swagger em `http://localhost:8000/docs`, e a conta de visitante da
+demonstração é criada no primeiro start (`app/core/demo_seed.py`, controlada por
+`demo_account_enabled`), então quem clonar o repositório continua navegando a
+interface sem cadastro.
 
 ## Funcionalidades
 
@@ -26,20 +31,38 @@ e armazenamento local.
 - **Pydantic v2** · **httpx** · **Alembic**
 - **ruff** · **mypy** · **pytest**
 
-## Screenshots
+## Prints
+
+Capturados em 24/09/2026 no deploy de demonstração, na conta de visitante.
+Os PNGs ficam em `screenshots/`.
 
 | Dashboard | Carteira |
 |---|---|
 | ![Dashboard](screenshots/01-dashboard.png) | ![Carteira](screenshots/02-carteira.png) |
 
-| Watchlists | Comparar ativos |
+| Listas | Comparar ativos |
 |---|---|
-| ![Watchlists](screenshots/03-watchlists.png) | ![Comparar](screenshots/05-comparar.png) |
+| ![Listas](screenshots/03-watchlists.png) | ![Comparar](screenshots/05-comparar.png) |
 
-Swagger com `HTTPBearer` registrado no OpenAPI — rotas autenticadas aparecem
-com o cadeado e o botão "Authorize":
+| Relatório do ativo | Alertas de preço |
+|---|---|
+| ![Relatório](screenshots/06-relatorio.png) | ![Alertas](screenshots/04-alertas.png) |
 
-![Swagger com cadeado de autenticação](screenshots/08-swagger-auth-lock.png)
+O dashboard abre com IBOVESPA, valor da carteira, preço de fechamento e
+rendimento médio de dividendos, seguido do preço dos últimos doze meses, da
+distribuição por setor e da tabela de principais ativos. A carteira mostra
+cada posição com custo, preço atual, peso e lucro. Comparar coloca dois ativos
+lado a lado e destaca o melhor valor de cada múltiplo. Alertas cria e verifica
+alertas de preço por ticker, condição e valor-alvo.
+
+A documentação OpenAPI fica em `/docs`, com as rotas agrupadas em Alertas,
+Ativos e Autenticação. O `HTTPBearer` registrado no OpenAPI faz as rotas
+protegidas aparecerem com o cadeado e abre o diálogo de autorização com o
+campo de token JWT.
+
+| Swagger | Autorização HTTPBearer |
+|---|---|
+| ![Swagger](screenshots/07-swagger-docs.png) | ![Authorize](screenshots/08-swagger-auth-lock.png) |
 
 ## Arquitetura
 
