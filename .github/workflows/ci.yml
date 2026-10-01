@@ -13,6 +13,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      # Os testes trocam o transporte HTTP do cliente brapi por um mock
+      # (httpx.MockTransport), então o token só precisa existir para o
+      # cliente inicializar: nenhuma chamada real à brapi sai daqui.
+      BRAPI_TOKEN: token-de-ci-sem-valor-real
+
     steps:
       - uses: actions/checkout@v4
 
